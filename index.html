@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nokonek0.apps — releases</title>
+<meta name="description" content="nokonek0 が個人開発しているアプリの配布ページ。Android / Web 対応。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============== TOKENS ============== */
+:root{
+  --ink:#0F0D16; --ink-raised:#1A1726; --ink-raised-2:#211D30;
+  --paper:#F4F2ED; --paper-dim:#8D899C; --paper-faint:#5C5870;
+  --line: rgba(244,242,237,0.09);
+  --indigo:#7B74FF; --indigo-dim: rgba(123,116,255,0.14);
+  --sage:#6FD9A0; --sage-dim: rgba(111,217,160,0.14);
+  --coral:#FF8F68; --coral-dim: rgba(255,143,104,0.14);
+  --gold:#F0C24E; --gold-dim: rgba(240,194,78,0.14);
+  --ghost:#4A465A;
+  --font-display:'Shippori Mincho',serif;
+  --font-body:'Zen Kaku Gothic New','Hiragino Sans',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0; background:var(--ink); color:var(--paper);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{ color:inherit; }
+::selection{ background:var(--indigo); color:#fff; }
+:focus-visible{ outline:2px solid var(--indigo); outline-offset:3px; border-radius:4px; }
+
+/* ============== BOOT SEQUENCE ============== */
+.boot{
+  position:fixed; inset:0; z-index:999; background:var(--ink);
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity .5s ease, visibility .5s ease;
+}
+.boot.done{ opacity:0; visibility:hidden; pointer-events:none; }
+.boot-line{ font-family:var(--font-mono); font-size:15px; color:var(--sage); display:flex; align-items:center; gap:2px; }
+.boot-cursor{ display:inline-block; width:8px; height:16px; background:var(--sage); animation:blinkCursor .9s steps(1) infinite; margin-left:2px; }
+@keyframes blinkCursor{ 0%,49%{opacity:1;} 50%,100%{opacity:0;} }
+
+/* ============== SCROLL PROGRESS ============== */
+.progress{
+  position:fixed; top:0; left:0; height:3px; width:0%; z-index:100;
+  background:linear-gradient(90deg,var(--indigo),var(--coral),var(--gold));
+  transition:width .12s linear; box-shadow:0 0 10px rgba(123,116,255,.6);
+}
+
+/* ============== AMBIENT BACKGROUND ============== */
+.orbs{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+.orb-p{ position:absolute; inset:0; transform:translateY(var(--py,0px)); }
+.orb{ position:absolute; border-radius:50%; filter:blur(70px); opacity:.55; mix-blend-mode:screen; }
+.orb1{ width:46vw; height:46vw; left:-10vw; top:-12vw; background:var(--indigo); animation:drift1 34s ease-in-out infinite; }
+.orb2{ width:38vw; height:38vw; right:-8vw; top:8vw; background:var(--coral); animation:drift2 40s ease-in-out infinite; }
+.orb3{ width:34vw; height:34vw; left:18vw; bottom:-14vw; background:var(--sage); animation:drift3 46s ease-in-out infinite; }
+.orb4{ width:24vw; height:24vw; right:14vw; bottom:6vw; background:var(--gold); animation:drift1 38s ease-in-out infinite reverse; opacity:.4; }
+
+@keyframes drift1{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(6vw,5vw) scale(1.12); } }
+@keyframes drift2{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-7vw,6vw) scale(0.92); } }
+@keyframes drift3{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(4vw,-6vw) scale(1.08); } }
+
+.noise{ position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.05; mix-blend-mode:overlay; }
+
+.cursor-glow{
+  position:fixed; inset:0; z-index:1; pointer-events:none; opacity:0;
+  background: radial-gradient(380px circle at var(--mx,50%) var(--my,30%), rgba(123,116,255,.14), transparent 70%);
+  transition:opacity .4s ease;
+}
+.cursor-glow.active{ opacity:1; }
+
+@media (prefers-reduced-motion: reduce){
+  .orb{ animation:none !important; }
+  html{ scroll-behavior:auto; }
+}
+
+/* ============== LAYOUT ============== */
+.wrap{ position:relative; z-index:2; max-width:760px; margin:0 auto; padding:0 22px; }
+
+.topbar{
+  position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between;
+  padding:18px 22px; backdrop-filter:blur(10px);
+  background:linear-gradient(to bottom, rgba(15,13,22,.85), rgba(15,13,22,0));
+}
+.brand{ display:flex; align-items:center; gap:9px; font-family:var(--font-mono); font-size:13.5px; font-weight:600; letter-spacing:.01em; color:var(--paper); text-decoration:none; }
+.brand-dot{ width:8px; height:8px; border-radius:50%; background:var(--indigo); box-shadow:0 0 12px var(--indigo); animation:dotPulse 2.6s ease-in-out infinite; }
+@keyframes dotPulse{ 0%,100%{ box-shadow:0 0 8px var(--indigo); } 50%{ box-shadow:0 0 18px var(--indigo); } }
+.brand-suffix{ color:var(--paper-faint); }
+.topbar nav{ display:flex; align-items:center; }
+.topbar nav a{
+  font-family:var(--font-mono); font-size:12px; color:var(--paper-dim); text-decoration:none; margin-left:20px;
+  transition:color .15s ease;
+}
+.topbar nav a:hover{ color:var(--paper); }
+
+/* ============== REVEAL SYSTEM (boot-synced) ============== */
+.reveal{ opacity:0; transform:translateY(16px); transition:opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1); }
+body.go .reveal{ opacity:1; transform:translateY(0); }
+.reveal[data-d="1"]{ transition-delay:.1s; }
+.reveal[data-d="2"]{ transition-delay:.25s; }
+.reveal[data-d="3"]{ transition-delay:.4s; }
+.reveal[data-d="4"]{ transition-delay:.55s; }
+
+/* ============== HERO ============== */
+.hero{ position:relative; padding:96px 0 84px; perspective:800px; }
+.eyebrow{
+  font-family:var(--font-mono); font-size:12.5px; color:var(--sage); letter-spacing:.04em;
+  display:flex; align-items:center; gap:8px; margin-bottom:22px;
+}
+.eyebrow::before{ content:'●'; font-size:8px; color:var(--sage); animation:blink 2.4s ease-in-out infinite; }
+@keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+.hero h1{
+  font-family:var(--font-display); font-weight:700; line-height:1.35;
+  font-size:clamp(32px, 6vw, 52px); margin:0 0 22px; letter-spacing:.01em;
+}
+.hero h1 .line{ display:block; overflow:hidden; }
+.hero h1 .line span{ display:block; transform:translateY(110%); transition:transform .8s cubic-bezier(.2,.8,.2,1); }
+body.go .hero h1 .line span{ transform:translateY(0); }
+.hero h1 .line:nth-child(1) span{ transition-delay:.1s; }
+.hero h1 .line:nth-child(2) span{
+  transition-delay:.26s;
+  background:linear-gradient(90deg,var(--indigo),var(--coral),var(--gold),var(--indigo));
+  background-size:300% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:gradientSweep 7s linear infinite;
+}
+@keyframes gradientSweep{ 0%{ background-position:0% 50%; } 100%{ background-position:300% 50%; } }
+@media (prefers-reduced-motion: reduce){
+  .hero h1 .line span{ transition:none; transform:none; }
+  .hero h1 .line:nth-child(2) span{ animation:none; }
+}
+
+.hero p{ font-size:15.5px; line-height:1.9; color:var(--paper-dim); max-width:480px; margin:0 0 30px; }
+
+.scrolldown{
+  display:inline-flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:11.5px;
+  color:var(--paper-faint); text-decoration:none;
+}
+.scrolldown svg{ animation:bob 1.8s ease-in-out infinite; }
+@keyframes bob{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(4px);} }
+
+/* ============== RELEASES ============== */
+.releases{ padding:20px 0 100px; perspective:900px; }
+.section-eyebrow{
+  font-family:var(--font-mono); font-size:12px; color:var(--paper-faint); margin-bottom:26px;
+  display:flex; align-items:center; gap:10px;
+}
+.section-eyebrow .rule{ flex:1; height:1px; background:var(--line); }
+
+.card{
+  position:relative; background:var(--ink-raised); border:1px solid var(--line); border-radius:18px;
+  padding:24px 26px; margin-bottom:16px; overflow:hidden; will-change:transform;
+  opacity:0; transform:translateY(22px);
+  transition:opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1), border-color .25s ease, background .25s ease;
+}
+.card.visible{ opacity:1; transform:translateY(0); }
+.card.settled{ transition:transform .12s ease, border-color .25s ease, background .25s ease; }
+@media (prefers-reduced-motion: reduce){
+  .card{ opacity:1; transform:none !important; transition:border-color .25s ease, background .25s ease; }
+}
+.card:not(.ghost):hover{ border-color:var(--accent, var(--indigo)); background:var(--ink-raised-2); }
+.card-sheen{
+  position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .3s ease;
+  background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.06) 45%, transparent 60%);
+  background-size:250% 250%; background-position:0% 0%;
+}
+.card:hover .card-sheen{ opacity:1; animation:sheenMove 1.4s ease forwards; }
+@keyframes sheenMove{ from{ background-position:120% -20%; } to{ background-position:-20% 120%; } }
+.card-accent-bar{ position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent, var(--indigo)); }
+.card-top{ display:flex; align-items:flex-start; gap:14px; margin-bottom:6px; }
+.card-icon{
+  width:42px; height:42px; border-radius:12px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center; font-size:19px; font-weight:700;
+  background:var(--accent-dim, var(--indigo-dim)); color:var(--accent, var(--indigo));
+  font-family:var(--font-display);
+}
+.card-titlewrap{ flex:1; min-width:0; }
+.card-name-row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.card-name{ font-family:var(--font-display); font-weight:700; font-size:19px; }
+.card-version{ font-family:var(--font-mono); font-size:11px; color:var(--paper-faint); background:rgba(255,255,255,.05); padding:2px 8px; border-radius:99px; }
+.card-status{ font-family:var(--font-mono); font-size:10.5px; color:var(--sage); display:flex; align-items:center; gap:5px; margin-top:3px; }
+.card-status .dot{ width:5px; height:5px; border-radius:50%; background:var(--sage); animation:blink 2.2s ease-in-out infinite; }
+.card-desc{ font-size:13.5px; color:var(--paper-dim); line-height:1.8; margin:10px 0 18px; }
+
+.btn-row{ display:flex; gap:10px; flex-wrap:wrap; }
+.btn{
+  position:relative; overflow:hidden; font-family:var(--font-mono); font-size:12.5px; font-weight:600;
+  padding:11px 16px; border-radius:11px; text-decoration:none; display:inline-flex; align-items:center; gap:7px;
+  transition:transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+}
+.btn:active{ transform:scale(.94) !important; }
+.btn-solid{ background:var(--accent, var(--indigo)); color:#0F0D16; }
+.btn-solid:hover{ box-shadow:0 0 26px var(--accent-dim, var(--indigo-dim)); }
+.btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--paper-dim); }
+.btn-ghost:hover{ border-color:var(--paper-faint); color:var(--paper); }
+.btn-disabled{ background:transparent; border:1px dashed var(--line); color:var(--paper-faint); cursor:default; pointer-events:none; }
+.ripple{
+  position:absolute; border-radius:50%; background:rgba(255,255,255,.5); pointer-events:none;
+  transform:scale(0); opacity:.6; animation:rippleAnim .55s ease-out forwards;
+}
+@keyframes rippleAnim{ to{ transform:scale(2.6); opacity:0; } }
+
+.card.ghost{ border-style:dashed; background:transparent; }
+.card.ghost .card-icon{ background:rgba(255,255,255,.04); color:var(--ghost); }
+.card.ghost .card-name{ color:var(--paper-faint); }
+.card.ghost .card-status{ color:var(--ghost); }
+.card.ghost .card-status .dot{ background:var(--ghost); animation:none; }
+.card.ghost .card-desc{ color:var(--paper-faint); }
+
+/* ============== FOOTER ============== */
+footer{ padding:40px 0 60px; border-top:1px solid var(--line); }
+footer p{ font-family:var(--font-mono); font-size:11.5px; color:var(--paper-faint); line-height:1.9; margin:0; }
+footer a{ color:var(--paper-dim); text-decoration:underline; text-decoration-color:var(--line); transition:color .15s ease; }
+footer a:hover{ color:var(--sage); }
+
+@media (max-width:560px){
+  .hero{ padding:72px 0 60px; }
+  .card{ padding:20px; }
+  .topbar nav a:nth-child(2){ display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="boot" id="boot">
+  <div class="boot-line">$ <span id="bootText"></span><span class="boot-cursor"></span></div>
+</div>
+
+<div class="progress" id="progress"></div>
+
+<svg class="noise" aria-hidden="true">
+  <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter>
+  <rect width="100%" height="100%" filter="url(#n)"/>
+</svg>
+
+<div class="orbs" aria-hidden="true">
+  <div class="orb-p" id="orbP1"><div class="orb orb1"></div></div>
+  <div class="orb-p" id="orbP2"><div class="orb orb2"></div></div>
+  <div class="orb-p" id="orbP3"><div class="orb orb3"></div></div>
+  <div class="orb-p" id="orbP4"><div class="orb orb4"></div></div>
+</div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<header class="topbar">
+  <a class="brand" href="#top"><span class="brand-dot"></span>nokonek0<span class="brand-suffix">.apps</span></a>
+  <nav>
+    <a href="#releases">releases</a>
+    <a href="https://github.com/nokonoko314" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</header>
+
+<main class="wrap" id="top">
+
+  <section class="hero" id="hero">
+    <p class="eyebrow reveal" data-d="0">nokonek0 が作っているもの</p>
+    <h1>
+      <span class="line"><span>個人開発アプリを</span></span>
+      <span class="line"><span>公開しています。</span></span>
+    </h1>
+    <p class="reveal" data-d="3">ダウンロードしてすぐ使えます。Android はファイルを直接インストール、Web 版はブラウザで開くだけ。新しいアプリができたら、このページに追加していきます。</p>
+    <a class="scrolldown reveal" data-d="4" href="#releases">
+      公開中のアプリを見る
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v9M2 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </section>
+
+  <section class="releases" id="releases">
+    <div class="section-eyebrow">$ ls ./releases --available<span class="rule"></span></div>
+    <div id="cardList"></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      個人開発者 <strong style="color:var(--paper-dim)">nokonek0</strong> が公開しているアプリの一覧です。<br>
+      Androidはapkを直接ダウンロードしてインストールします（初回のみ「不明なソースを許可」が必要）。iOS版は準備中です。<br>
+      GitHub: <a href="https://github.com/nokonoko314" target="_blank" rel="noopener">github.com/nokonoko314</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+/* =====================================================================
+   アプリ一覧。新しいアプリができたら、この配列に1つオブジェクトを
+   追加するだけでOKです（HTMLは書き換えなくていい設計にしています）。
+
+   accent      : カードのテーマカラー（indigo / sage / coral / gold から選ぶ）
+   version     : 表示用のバージョン文字列
+   android.url : apkの直接ダウンロードURL（GitHub Releasesの"latest"を指す
+                 URLにしておくと、タグをpushするだけで自動的に最新版を指す）
+   web.url     : Web版（flutter build web の出力）を置いたパス
+                 例：docs/studysync/ に置いた場合 → "./studysync/"
+   ===================================================================== */
+const APPS = [
+  {
+    id: 'studysync',
+    icon: 'S',
+    name: 'StudySync',
+    version: 'v1.0.0',
+    accent: 'indigo',
+    desc: '忘却曲線にもとづいて、復習タスクを自動でスケジュールする学習管理アプリ。',
+    android: { url: 'https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/releases/latest/download/app-release.apk' },
+    web: { url: './studysync/' },
+  },
+  // 次のアプリができたら、ここに追加 ↓
+  // {
+  //   id: 'next-app', icon: 'N', name: 'Next App', version: 'v1.0.0', accent: 'sage',
+  //   desc: '説明文をここに。',
+  //   android: { url: '...' }, web: { url: './next-app/' },
+  // },
+];
+
+const ACCENTS = {
+  indigo: { c: '#7B74FF', d: 'rgba(123,116,255,0.14)' },
+  sage:   { c: '#6FD9A0', d: 'rgba(111,217,160,0.14)' },
+  coral:  { c: '#FF8F68', d: 'rgba(255,143,104,0.14)' },
+  gold:   { c: '#F0C24E', d: 'rgba(240,194,78,0.14)' },
+};
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderCard(app){
+  const accent = ACCENTS[app.accent] || ACCENTS.indigo;
+  const androidBtn = app.android
+    ? `<a class="btn btn-solid" data-magnet href="${escapeHtml(app.android.url)}">⬇ Android (apk)</a>`
+    : `<span class="btn btn-disabled">Android 準備中</span>`;
+  const webBtn = app.web
+    ? `<a class="btn btn-ghost" data-magnet href="${escapeHtml(app.web.url)}" target="_blank" rel="noopener">↗ Webで開く</a>`
+    : `<span class="btn btn-disabled">Web 準備中</span>`;
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.style.setProperty('--accent', accent.c);
+  div.style.setProperty('--accent-dim', accent.d);
+  div.innerHTML = `
+    <div class="card-accent-bar"></div>
+    <div class="card-sheen"></div>
+    <div class="card-top">
+      <div class="card-icon">${escapeHtml(app.icon)}</div>
+      <div class="card-titlewrap">
+        <div class="card-name-row">
+          <span class="card-name">${escapeHtml(app.name)}</span>
+          <span class="card-version">${escapeHtml(app.version)}</span>
+        </div>
+        <div class="card-status"><span class="dot"></span>配布中</div>
+      </div>
+    </div>
+    <p class="card-desc">${escapeHtml(app.desc)}</p>
+    <div class="btn-row">${androidBtn}${webBtn}</div>
+  `;
+  return div;
+}
+
+function renderGhostCard(){
+  const div = document.createElement('div');
+  div.className = 'card ghost';
+  div.innerHTML = `
+    <div class="card-top">
+      <div class="card-icon">+</div>
+      <div class="card-titlewrap">
+        <div class="card-name-row"><span class="card-name">次のアプリ</span></div>
+        <div class="card-status"><span class="dot"></span>準備中</div>
+      </div>
+    </div>
+    <p class="card-desc">作り次第、ここに追加されます。</p>
+  `;
+  return div;
+}
+
+/* ---------- Boot sequence ---------- */
+function runBoot(cb){
+  const text = 'nokonek0.apps を起動しています';
+  const el = document.getElementById('bootText');
+  const reduced = !matchMedia('(prefers-reduced-motion: no-preference)').matches;
+  if (reduced){ document.getElementById('boot').classList.add('done'); cb(); return; }
+  let i = 0;
+  const interval = setInterval(() => {
+    el.textContent = text.slice(0, i+1);
+    i++;
+    if (i >= text.length){
+      clearInterval(interval);
+      setTimeout(() => {
+        document.getElementById('boot').classList.add('done');
+        cb();
+      }, 350);
+    }
+  }, 38);
+}
+
+/* ---------- Scroll progress + parallax ---------- */
+function onScroll(){
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+  document.getElementById('progress').style.width = pct + '%';
+
+  if (matchMedia('(prefers-reduced-motion: no-preference)').matches){
+    const y = window.scrollY;
+    document.getElementById('orbP1').style.setProperty('--py', (y * 0.06) + 'px');
+    document.getElementById('orbP2').style.setProperty('--py', (y * -0.04) + 'px');
+    document.getElementById('orbP3').style.setProperty('--py', (y * 0.08) + 'px');
+    document.getElementById('orbP4').style.setProperty('--py', (y * -0.05) + 'px');
+  }
+}
+
+/* ---------- Card scroll-reveal ---------- */
+function setupReveal(){
+  const cards = document.querySelectorAll('.card');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting){
+        const target = entry.target;
+        setTimeout(() => {
+          target.classList.add('visible');
+          target.addEventListener('transitionend', function handler(e){
+            if (e.propertyName === 'opacity'){ target.classList.add('settled'); target.removeEventListener('transitionend', handler); }
+          });
+        }, i * 70);
+        io.unobserve(target);
+      }
+    });
+  }, { threshold: 0.15 });
+  cards.forEach(c => io.observe(c));
+}
+
+/* ---------- Card 3D tilt ---------- */
+function setupTilt(){
+  if (!matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  document.querySelectorAll('.card:not(.ghost)').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = `translateY(-3px) rotateX(${py * -5}deg) rotateY(${px * 7}deg)`;
+    });
+    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+  });
+}
+
+/* ---------- Magnetic buttons ---------- */
+function setupMagnetic(){
+  if (!matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  document.querySelectorAll('[data-magnet]').forEach(btn => {
+    btn.addEventListener('mousemove', (e) => {
+      const r = btn.getBoundingClientRect();
+      const x = e.clientX - r.left - r.width / 2;
+      const y = e.clientY - r.top - r.height / 2;
+      btn.style.transform = `translate(${x * 0.18}px, ${y * 0.3}px)`;
+    });
+    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  });
+}
+
+/* ---------- Button ripple ---------- */
+function setupRipple(){
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn');
+    if (!btn || btn.classList.contains('btn-disabled')) return;
+    const r = btn.getBoundingClientRect();
+    const span = document.createElement('span');
+    const size = Math.max(r.width, r.height);
+    span.className = 'ripple';
+    span.style.width = span.style.height = size + 'px';
+    span.style.left = (e.clientX - r.left - size / 2) + 'px';
+    span.style.top = (e.clientY - r.top - size / 2) + 'px';
+    btn.appendChild(span);
+    setTimeout(() => span.remove(), 600);
+  });
+}
+
+/* ---------- Cursor glow (site-wide) ---------- */
+function setupCursorGlow(){
+  const glow = document.getElementById('cursorGlow');
+  if (!matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  window.addEventListener('pointermove', (e) => {
+    glow.style.setProperty('--mx', e.clientX + 'px');
+    glow.style.setProperty('--my', e.clientY + 'px');
+    glow.classList.add('active');
+  });
+  window.addEventListener('pointerleave', () => glow.classList.remove('active'));
+}
+
+function init(){
+  const list = document.getElementById('cardList');
+  APPS.forEach(app => list.appendChild(renderCard(app)));
+  list.appendChild(renderGhostCard());
+
+  setupReveal();
+  setupTilt();
+  setupMagnetic();
+  setupRipple();
+  setupCursorGlow();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  runBoot(() => { document.body.classList.add('go'); });
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
