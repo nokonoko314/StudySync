@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudySync をダウンロード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F1F0F6; --surface:#FFFFFF; --ink:#1E1B2E; --ink-soft:#5B5770; --ink-faint:#A19DB3;
+    --indigo:#423E99; --indigo-deep:#2C2A66; --indigo-soft:#E8E6F6;
+    --coral:#E2613B; --sage:#4F8868; --sage-soft:#E2EFE8; --line:#E5E3EE;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    padding:48px 20px 60px;
+  }
+  .hero{ text-align:center; max-width:480px; margin-bottom:32px; }
+  .hero h1{ font-family:'Shippori Mincho',serif; font-size:30px; margin:0 0 8px; }
+  .hero p{ font-size:14px; color:var(--ink-soft); line-height:1.8; margin:0; }
+  .curve{ width:220px; height:70px; margin:18px auto 0; display:block; }
+
+  .cards{ width:100%; max-width:480px; display:flex; flex-direction:column; gap:16px; }
+  .card{
+    background:var(--surface); border-radius:20px; padding:22px 22px 24px;
+    box-shadow:0 10px 28px rgba(30,27,46,.08);
+  }
+  .card-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .badge{
+    width:34px; height:34px; border-radius:10px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .badge.android{ background:var(--sage-soft); color:var(--sage); }
+  .badge.ios{ background:var(--indigo-soft); color:var(--indigo); }
+  .card h2{ font-family:'Shippori Mincho',serif; font-size:18px; margin:0; }
+  .card p{ font-size:13px; color:var(--ink-soft); line-height:1.8; margin:0 0 16px; }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:14px; border-radius:14px; font-weight:700; font-size:14.5px;
+    text-decoration:none; transition:opacity .15s ease, transform .12s ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--indigo); color:#fff; }
+  .btn-secondary{ background:var(--indigo-soft); color:var(--indigo); }
+  .btn-disabled{ background:var(--line); color:var(--ink-faint); pointer-events:none; }
+  .steps{ margin:14px 0 0; padding-left:18px; font-size:12.5px; color:var(--ink-soft); line-height:1.9; }
+  .footnote{
+    max-width:480px; text-align:center; font-size:11.5px; color:var(--ink-faint);
+    line-height:1.8; margin-top:28px;
+  }
+  .footnote a{ color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <h1>StudySync</h1>
+    <p>忘却曲線にもとづいて復習タスクを自動管理する学習アプリです。<br>下のボタンからダウンロードしてください。</p>
+    <svg class="curve" viewBox="0 0 220 70" aria-hidden="true">
+      <path d="M2,10 C18,10 22,40 38,42 C50,43 52,14 70,12 C88,10 92,44 110,45 C126,46 130,16 148,14 C166,12 170,46 188,47 C200,48 204,18 218,16"
+            fill="none" stroke="#423E99" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+    </svg>
+  </div>
+
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="badge android">🤖</div>
+        <h2>Android版</h2>
+      </div>
+      <p>apkファイルを直接ダウンロードしてインストールします。初回のみ「不明なソースからのインストール」を許可する必要があります。</p>
+      <!-- 下のURLは、GitHub Releasesに上がっている最新のapkを自動的に指します。
+           YOUR_GITHUB_USERNAME / YOUR_REPO_NAME を、実際の値に置き換えてください。 -->
+      <a class="btn btn-primary" href="https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/releases/latest/download/app-release.apk">
+        ⬇ Androidでダウンロード
+      </a>
+      <ol class="steps">
+        <li>上のボタンをタップしてapkをダウンロード</li>
+        <li>ダウンロード通知をタップして「インストール」</li>
+        <li>初回は「このソースを許可」の確認が出たらON</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="badge ios">🍎</div>
+        <h2>iOS版（iPhone / iPad）</h2>
+      </div>
+      <p>TestFlightアプリ経由で配布します。下のリンクから参加すると、TestFlightアプリのインストール → StudySyncのインストールへ進めます。</p>
+      <!-- TestFlightで「内部テスター」を追加し、公開リンクが発行されたら
+           href="#" を そのリンクに置き換えてください。 -->
+      <a class="btn btn-disabled" href="#">
+        🔗 TestFlightリンク（準備中）
+      </a>
+      <ol class="steps">
+        <li>App Store Connectでテスターとして招待される</li>
+        <li>TestFlightアプリ（App Storeにあります）をインストール</li>
+        <li>招待リンクを開き、StudySyncをインストール</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <p class="footnote">
+    このページは GitHub Pages で公開されています。Android版は誰でもダウンロードできますが、
+    iOS版（TestFlight）は招待されたテスターのみインストールできます。
+  </p>
+
+</body>
+</html>
