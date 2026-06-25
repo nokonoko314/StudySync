@@ -18,6 +18,10 @@ class NotificationService {
   static Future<void> init() async {
     if (_initialized) return;
     tzdata.initializeTimeZones();
+    // ここが今回の不具合の本体：これを呼ばないと tz.local が既定でUTCになり、
+    // 「期限の15分前」のような計算がすべて日本時間とUTCの差（9時間）だけ
+    // ズレてしまう。日本専用アプリなので固定で設定する。
+    tz.setLocalLocation(tz.getLocation('Asia/Tokyo'));
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
