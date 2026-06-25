@@ -94,7 +94,7 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
       return;
     }
     if (_projectId == null) {
-      _toast('プロジェクトを選択してください', error: true);
+      _toast('教科を選択してください', error: true);
       return;
     }
     final group = _groupCtrl.text.trim().isEmpty ? null : _groupCtrl.text.trim();
@@ -141,7 +141,7 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _label('プロジェクト'),
+                _label('教科'),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: _boxDecoration(),
@@ -160,7 +160,7 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
             ),
           ]),
           const SizedBox(height: 16),
-          _label('グループ（任意）'),
+          _label('プロジェクト（任意）'),
           TextField(controller: _groupCtrl, decoration: _decoration('例：期末試験')),
           if (groupOptions.isNotEmpty)
             Padding(

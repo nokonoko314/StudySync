@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -13,8 +14,21 @@ Future<void> main() async {
   // firebase_options.dart は `flutterfire configure` を実行すると
   // 自動生成されます（README_FLUTTER.md 参照）。まだ実行していない場合は
   // ここでビルドエラーになります。
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await NotificationService.init();
+  //
+  // どちらの初期化も、万が一固まってしまった場合に画面が永遠に真っ黒/
+  // 起動中のまま、にならないようタイムアウトを付けている。失敗しても
+  // アプリ自体は起動させ、Firebase関連の機能だけが使えない状態で続行する。
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
+        .timeout(const Duration(seconds: 10));
+  } catch (e) {
+    debugPrint('[main] Firebase.initializeApp failed or timed out: $e');
+  }
+  try {
+    await NotificationService.init().timeout(const Duration(seconds: 5));
+  } catch (e) {
+    debugPrint('[main] NotificationService.init failed or timed out: $e');
+  }
   runApp(const StudySyncApp());
 }
 

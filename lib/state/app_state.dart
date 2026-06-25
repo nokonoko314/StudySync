@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/project.dart';
 import '../models/task.dart';
 import '../models/app_settings.dart';
@@ -55,59 +57,86 @@ class AppState extends ChangeNotifier {
 
   Future<void> load() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      var handled = false;
-      if (user != null) {
-        // 前回ログイン済みのままアプリを再起動した場合：まずクラウドの
-        // データを優先して取り込む（他端末での変更を反映するため）。
-        // オフライン等で失敗した場合は、ローカルの保存データにフォールバックする。
-        try {
-          final cloud = await SyncService.pull(user.uid);
-          if (cloud != null) {
-            projects = cloud.projects;
-            tasks = cloud.tasks;
-            settings = cloud.settings;
-            settings.googleConnected = true;
-            settings.googleEmail = user.email ?? '';
-            await PersistenceService.save(projects, tasks, settings);
-            handled = true;
-          }
-        } catch (e) {
-          debugPrint('[AppState.load] cloud pull failed: $e');
-          // オフラインなどでクラウド取得に失敗 → ローカルデータで続行する
-        }
-      }
-
-      if (!handled) {
-        final saved = await PersistenceService.load();
-        if (saved == null) {
-          seedDemoData(this);
-          await _persist();
-        } else {
-          projects = saved.projects;
-          tasks = saved.tasks;
-          settings = saved.settings;
-        }
-      }
-
-      // 端末を再起動した場合などに備え、起動時に通知予約を設定内容に
-      // 合わせて再適用しておく。失敗しても起動自体は止めない。
-      try {
-        await NotificationService.rescheduleAll(tasks, settings);
-      } catch (e) {
-        debugPrint('[AppState.load] notification schedule failed: $e');
-      }
+      await _doLoad().timeout(const Duration(seconds: 20));
+    } on TimeoutException catch (_) {
+      debugPrint('[AppState.load] timed out after 20s — continuing with whatever is available');
     } catch (e, st) {
       debugPrint('[AppState.load] unexpected error: $e\n$st');
+    } finally {
       if (projects.isEmpty && tasks.isEmpty) {
+        // ここまでで何も読み込めていなければ、最後の手段としてデモデータを入れる
         seedDemoData(this);
       }
-    } finally {
-      // ここを必ず通すことで、どこかで失敗してもアプリが
+      // ここを必ず通すことで、どこかで失敗・タイムアウトしてもアプリが
       // 「読み込み中」のまま固まらないようにしている。
       _loaded = true;
       notifyListeners();
     }
+  }
+
+  Future<void> _doLoad() async {
+    final user = FirebaseAuth.instance.currentUser;
+    var handled = false;
+    if (user != null) {
+      // 前回ログイン済みのままアプリを再起動した場合：まずクラウドの
+      // データを優先して取り込む（他端末での変更を反映するため）。
+      // オフライン等で失敗した場合は、ローカルの保存データにフォールバックする。
+      try {
+        final cloud = await SyncService.pull(user.uid).timeout(const Duration(seconds: 8));
+        if (cloud != null) {
+          projects = cloud.projects;
+          tasks = cloud.tasks;
+          settings = cloud.settings;
+          settings.googleConnected = true;
+          settings.googleEmail = user.email ?? '';
+          await PersistenceService.save(projects, tasks, settings);
+          handled = true;
+        }
+      } catch (e) {
+        debugPrint('[AppState.load] cloud pull failed: $e');
+        // オフラインなどでクラウド取得に失敗 → ローカルデータで続行する
+      }
+    }
+
+    if (!handled) {
+      final saved = await PersistenceService.load();
+      if (saved == null) {
+        seedDemoData(this);
+        await _persist();
+      } else {
+        projects = saved.projects;
+        tasks = saved.tasks;
+        settings = saved.settings;
+      }
+    }
+
+    // 通知の許可状態は、システムの設定画面から直接許可された場合でも
+    // 正しく反映されるよう、起動時に実際のOS側の状態と同期しておく。
+    try {
+      await syncNotifPermission();
+    } catch (e) {
+      debugPrint('[AppState.load] notif permission sync failed: $e');
+    }
+
+    // 端末を再起動した場合などに備え、起動時に通知予約を設定内容に
+    // 合わせて再適用しておく。失敗しても起動自体は止めない。
+    try {
+      await NotificationService.rescheduleAll(tasks, settings).timeout(const Duration(seconds: 8));
+    } catch (e) {
+      debugPrint('[AppState.load] notification schedule failed: $e');
+    }
+  }
+
+  /// OS側の実際の通知許可状態を確認し、settings.notifGranted を同期する。
+  /// 「アプリ内のスイッチではなく、端末の設定から直接許可した」場合にも
+  /// 正しく反映されるようにするためのもの。
+  Future<bool> syncNotifPermission() async {
+    final status = await Permission.notification.status;
+    if (settings.notifGranted != status.isGranted) {
+      settings.notifGranted = status.isGranted;
+      _persist();
+    }
+    return status.isGranted;
   }
 
   Future<void> _persist() async {
@@ -147,35 +176,18 @@ class AppState extends ChangeNotifier {
 
   // ===================== Projects =====================
 
-  Project addProject(
-      {required String name, required Color color, DateTime? start, DateTime? end}) {
-    final p = Project(id: newId('proj'), name: name, color: color, start: start, end: end);
+  Project addProject({required String name, required Color color}) {
+    final p = Project(id: newId('proj'), name: name, color: color);
     projects.add(p);
     _persist();
     notifyListeners();
     return p;
   }
 
-  void updateProject(String id,
-      {String? name,
-      Color? color,
-      DateTime? start,
-      DateTime? end,
-      bool clearStart = false,
-      bool clearEnd = false}) {
+  void updateProject(String id, {String? name, Color? color}) {
     final p = projects.firstWhere((p) => p.id == id);
     if (name != null) p.name = name;
     if (color != null) p.color = color;
-    if (clearStart) {
-      p.start = null;
-    } else if (start != null) {
-      p.start = start;
-    }
-    if (clearEnd) {
-      p.end = null;
-    } else if (end != null) {
-      p.end = end;
-    }
     _persist();
     notifyListeners();
   }
@@ -256,7 +268,12 @@ class AppState extends ChangeNotifier {
 
   void deleteTask(String id) {
     NotificationService.cancelForTask(id).catchError((_) {});
-    tasks.removeWhere((t) => t.id == id);
+    // 元のタスクを消したら、そこから生成された復習タスクも一緒に消す
+    final children = tasks.where((t) => t.parentId == id).map((t) => t.id).toList();
+    for (final childId in children) {
+      NotificationService.cancelForTask(childId).catchError((_) {});
+    }
+    tasks.removeWhere((t) => t.id == id || t.parentId == id);
     _persist();
     notifyListeners();
   }
@@ -405,7 +422,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// グループ名を「使ったことがある候補」として記録する。
+  /// 「プロジェクト」名（旧グループ）を「使ったことがある候補」として記録する。
   /// 一度使えば、別のタスク・別の科目でも次から候補に出てくるようになる。
   void registerGroup(String group) {
     final trimmed = group.trim();

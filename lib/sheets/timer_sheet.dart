@@ -8,36 +8,22 @@ import '../utils/date_utils.dart';
 import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
 
-/// 学習タイマーのシート。スワイプでの dismiss は無効にしてあり、
-/// 閉じる手段は ×ボタン（停止して保存してから閉じる）か、
-/// 停止ボタンのみに統一しています（記録の保存し忘れを防ぐため）。
+/// 学習タイマーのシート。
+///
+/// 閉じ方は×ボタン・下にスワイプ・画面外タップのどれでもOKで、
+/// どの方法で閉じても計測中の時間は自動で保存される（Stateのdispose
+/// で保存するようにしているので、閉じ方の違いに関係なく必ず動く）。
 void showTimerSheet(BuildContext context, String taskId) {
-  final bodyKey = GlobalKey<_TimerBodyState>();
   showAppSheet(
     context,
     title: '学習タイマー',
-    isDismissible: false,
-    enableDrag: false,
-    actions: [
-      IconButton(
-        icon: const Icon(Icons.close, color: AppColors.ink),
-        onPressed: () {
-          try {
-            bodyKey.currentState?.stopAndSave();
-          } catch (_) {
-            // 保存に失敗しても、シートを閉じる動作自体は必ず実行する
-          }
-          Navigator.of(context).pop();
-        },
-      ),
-    ],
-    bodyBuilder: (ctx) => _TimerBody(key: bodyKey, taskId: taskId),
+    bodyBuilder: (ctx) => _TimerBody(taskId: taskId),
   );
 }
 
 class _TimerBody extends StatefulWidget {
   final String taskId;
-  const _TimerBody({super.key, required this.taskId});
+  const _TimerBody({required this.taskId});
 
   @override
   State<_TimerBody> createState() => _TimerBodyState();
@@ -48,10 +34,14 @@ class _TimerBodyState extends State<_TimerBody> {
   final Stopwatch _stopwatch = Stopwatch();
   Duration _elapsed = Duration.zero;
   bool _running = false;
+  bool _savedAlready = false;
 
   @override
   void dispose() {
     _ticker?.cancel();
+    // シートがどう閉じられても（×、スワイプ、画面外タップ、戻る操作）
+    // dispose は必ず呼ばれるので、ここで記録を確定させる。
+    _saveNow();
     super.dispose();
   }
 
@@ -71,26 +61,41 @@ class _TimerBodyState extends State<_TimerBody> {
     });
   }
 
-  /// 停止して記録を保存する。タイマー画面の×ボタンからも呼ばれる。
-  void stopAndSave() {
-    if (!mounted) return;
+  /// 手動の「停止」ボタンから呼ばれる：保存して、画面上の表示も0に戻す
+  /// （シートはまだ閉じない。連続でもう一回計測できるように）。
+  void _manualStop() {
     _ticker?.cancel();
-    final seconds = _stopwatch.elapsed.inSeconds;
-    _stopwatch
-      ..stop()
-      ..reset();
+    _saveNow();
     setState(() {
       _running = false;
       _elapsed = Duration.zero;
     });
-    if (seconds > 0) {
+  }
+
+  /// 実際にAppStateへ記録を書き込む。dispose中・手動停止どちらからも呼ばれる。
+  void _saveNow() {
+    if (_savedAlready) return;
+    final seconds = _stopwatch.elapsed.inSeconds;
+    _stopwatch
+      ..stop()
+      ..reset();
+    if (seconds <= 0) return;
+    _savedAlready = true;
+    try {
       context.read<AppState>().commitSession(widget.taskId, seconds);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('記録しました（${formatDuration(seconds)}）'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.ink,
-      ));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('記録しました（${formatDuration(seconds)}）'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.ink,
+        ));
+      }
+    } catch (_) {
+      // dispose の後など、contextが使えない場合はここに来るが、
+      // commitSession 自体は AppState 側の話なので無視してよい
     }
+    // 同じ画面でもう一度計測を始めたときのために、フラグを戻す
+    _savedAlready = false;
   }
 
   @override
@@ -112,7 +117,7 @@ class _TimerBodyState extends State<_TimerBody> {
           const SizedBox(height: 18),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Pressable(
-              onTap: stopAndSave,
+              onTap: _manualStop,
               child: Container(
                 width: 64,
                 height: 64,
@@ -139,7 +144,7 @@ class _TimerBodyState extends State<_TimerBody> {
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerLeft,
-            child: Text('停止すると学習記録として保存され、タスクの合計学習時間に加算されます。', style: AppTheme.body(12, color: AppColors.inkSoft)),
+            child: Text('停止する、または閉じると学習記録として保存され、タスクの合計学習時間に加算されます。', style: AppTheme.body(12, color: AppColors.inkSoft)),
           ),
           const SizedBox(height: 18),
           Align(

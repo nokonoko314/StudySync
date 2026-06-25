@@ -8,7 +8,7 @@ import '../widgets/pressable.dart';
 void showProjectEditSheet(BuildContext context, String? projectId) {
   showAppSheet(
     context,
-    title: projectId == null ? '新しいプロジェクト' : 'プロジェクトを編集',
+    title: projectId == null ? '新しい教科' : '教科を編集',
     bodyBuilder: (ctx) => _ProjectEditBody(projectId: projectId),
   );
 }
@@ -24,8 +24,6 @@ class _ProjectEditBody extends StatefulWidget {
 class _ProjectEditBodyState extends State<_ProjectEditBody> {
   final _nameCtrl = TextEditingController();
   Color _color = AppColors.projectPalette.first;
-  DateTime? _start;
-  DateTime? _end;
 
   @override
   void initState() {
@@ -34,8 +32,6 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
       final p = context.read<AppState>().projects.firstWhere((p) => p.id == widget.projectId);
       _nameCtrl.text = p.name;
       _color = p.color;
-      _start = p.start;
-      _end = p.end;
     }
   }
 
@@ -45,39 +41,18 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
     super.dispose();
   }
 
-  Future<void> _pickStart() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _start ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-    );
-    if (picked != null) setState(() => _start = picked);
-  }
-
-  Future<void> _pickEnd() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _end ?? (_start ?? DateTime.now()),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-    );
-    if (picked != null) setState(() => _end = picked);
-  }
-
   void _save() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('プロジェクト名を入力してください'), backgroundColor: AppColors.coral));
+          const SnackBar(content: Text('教科名を入力してください'), backgroundColor: AppColors.coral));
       return;
     }
     final state = context.read<AppState>();
     if (widget.projectId != null) {
-      state.updateProject(widget.projectId!,
-          name: name, color: _color, start: _start, end: _end, clearStart: _start == null, clearEnd: _end == null);
+      state.updateProject(widget.projectId!, name: name, color: _color);
     } else {
-      state.addProject(name: name, color: _color, start: _start, end: _end);
+      state.addProject(name: name, color: _color);
     }
     Navigator.pop(context);
   }
@@ -86,8 +61,8 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('プロジェクトを削除'),
-        content: const Text('このプロジェクトと関連するタスクをすべて削除しますか？'),
+        title: const Text('教科を削除'),
+        content: const Text('この教科と関連するタスクをすべて削除しますか？'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('キャンセル')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('削除', style: TextStyle(color: AppColors.coral))),
@@ -100,9 +75,6 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
     }
   }
 
-  String _dateLabel(DateTime? d) =>
-      d == null ? '未設定' : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -111,7 +83,7 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('プロジェクト名', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft)),
+          Text('教科名', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft)),
           const SizedBox(height: 6),
           TextField(
             controller: _nameCtrl,
@@ -141,38 +113,6 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
                     ))
                 .toList(),
           ),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('テスト期間（開始）', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft)),
-                const SizedBox(height: 6),
-                Pressable(
-                  onTap: _pickStart,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
-                    decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(11), border: Border.all(color: AppColors.line, width: 1.5)),
-                    child: Text(_dateLabel(_start), style: AppTheme.body(13.5)),
-                  ),
-                ),
-              ]),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('テスト期間（終了）', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft)),
-                const SizedBox(height: 6),
-                Pressable(
-                  onTap: _pickEnd,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
-                    decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(11), border: Border.all(color: AppColors.line, width: 1.5)),
-                    child: Text(_dateLabel(_end), style: AppTheme.body(13.5)),
-                  ),
-                ),
-              ]),
-            ),
-          ]),
           const SizedBox(height: 22),
           Row(children: [
             if (widget.projectId != null)

@@ -3,11 +3,10 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/project.dart';
 import '../app_theme.dart';
-import '../utils/date_utils.dart';
 import '../sheets/project_edit_sheet.dart';
 import 'pressable.dart';
 
-/// 左から開くプロジェクト一覧ドロワー。タップしたプロジェクトだけに
+/// 左から開く教科一覧ドロワー。タップした教科だけに
 /// ホーム画面のタスク一覧を絞り込みます（HTMLプロトタイプの#drawerに相当）。
 class ProjectDrawer extends StatelessWidget {
   const ProjectDrawer({super.key});
@@ -23,9 +22,9 @@ class ProjectDrawer extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('プロジェクト', style: AppTheme.display(19)),
+              Text('教科', style: AppTheme.display(19)),
               const SizedBox(height: 2),
-              Text('タップすると、そのプロジェクトのタスクだけ表示します',
+              Text('タップすると、その教科のタスクだけ表示します',
                   style: AppTheme.body(11.5, color: AppColors.inkSoft)),
             ]),
           ),
@@ -50,7 +49,7 @@ class ProjectDrawer extends StatelessWidget {
                   showProjectEditSheet(context, null);
                 },
                 icon: const Icon(Icons.add, size: 16, color: AppColors.indigo),
-                label: Text('新しいプロジェクト',
+                label: Text('新しい教科',
                     style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.indigo)),
                 style: OutlinedButton.styleFrom(
                     backgroundColor: AppColors.indigoSoft,
@@ -128,16 +127,6 @@ class ProjectDrawer extends StatelessWidget {
         ]),
       ),
     ];
-    if (p.start != null && p.end != null) {
-      final daysLeft = p.end!.difference(DateTime.now()).inDays;
-      rows.add(Padding(
-        padding: const EdgeInsets.only(left: 20, bottom: 6),
-        child: Text(
-          'テスト期間 ${fmtShort(p.start!)}〜${fmtShort(p.end!)}${daysLeft >= 0 ? '・あと$daysLeft日' : ''}',
-          style: AppTheme.body(10.5, color: AppColors.inkFaint),
-        ),
-      ));
-    }
     return rows;
   }
 }

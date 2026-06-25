@@ -24,7 +24,7 @@ class AppColors {
     BoxShadow(color: Color(0x0F1E1B2E), blurRadius: 2, offset: Offset(0, 1)),
   ];
 
-  /// プロジェクトの色（ドット・タグ・グラフに使用）
+  /// 教科の色（ドット・タグ・グラフに使用）
   static const projectPalette = [
     indigo,
     sage,

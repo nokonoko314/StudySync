@@ -102,7 +102,7 @@ class _StatsScreenState extends State<StatsScreen> {
               final label = switch (v) {
                 _StatsView.day => '日別',
                 _StatsView.week => '週別',
-                _StatsView.project => 'プロジェクト別',
+                _StatsView.project => '教科別',
                 _StatsView.task => 'タスク別',
               };
               return Expanded(

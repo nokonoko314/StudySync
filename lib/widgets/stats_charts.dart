@@ -56,7 +56,7 @@ class BarChartWidget extends StatelessWidget {
   }
 }
 
-/// プロジェクト別／タスク別グラフ用の横バー一覧。
+/// 教科別／タスク別グラフ用の横バー一覧。
 class HorizontalBarList extends StatelessWidget {
   final List<HBarItem> items;
   const HorizontalBarList({super.key, required this.items});

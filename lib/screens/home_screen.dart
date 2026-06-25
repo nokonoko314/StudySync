@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/task.dart';
 import '../app_theme.dart';
-import '../utils/date_utils.dart';
 import '../widgets/task_card.dart';
 import '../widgets/pressable.dart';
 import '../widgets/project_drawer.dart';
@@ -44,11 +43,7 @@ class HomeScreen extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(project?.name ?? 'すべてのタスク', style: AppTheme.display(21)),
                   Text(
-                    project != null
-                        ? (project.start != null
-                            ? 'テスト期間 ${fmtShort(project.start!)}〜${fmtShort(project.end!)}'
-                            : 'プロジェクトのタスクを表示中')
-                        : '登録中のタスクとプロジェクト',
+                    project != null ? 'この教科のタスクを表示中' : '登録中のタスクと教科',
                     style: AppTheme.body(12, color: AppColors.inkSoft),
                   ),
                   if (project != null)

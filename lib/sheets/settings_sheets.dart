@@ -441,6 +441,7 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
 // =====================================================================
 
 void showNotificationSheet(BuildContext context) {
+  context.read<AppState>().syncNotifPermission();
   showAppSheet(context, title: '通知', bodyBuilder: (ctx) => const _NotificationBody());
 }
 

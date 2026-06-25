@@ -13,7 +13,7 @@ class AppSettings {
   bool notifDeadline;
   int reviewLeadMinutes; // 復習タスク：期限の何分前に知らせるか。既定60分
   int deadlineLeadMinutes; // 通常タスク：期限の何分前に知らせるか。既定180分
-  List<String> knownGroups; // 一度使ったグループ名を覚えておき、次回から候補として出す
+  List<String> knownGroups; // 一度使った「プロジェクト」名を覚えておき、次回から候補として出す
   int defaultDueHour; // 新規タスク作成時の既定の期限時刻（時）。既定23時
   int defaultDueMinute; // 新規タスク作成時の既定の期限時刻（分）
   WallpaperType wallpaperType;

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../app_theme.dart';
+import '../changelog.dart';
 import '../sheets/settings_sheets.dart';
 import '../sheets/project_list_sheet.dart';
+import '../sheets/changelog_sheet.dart';
 import '../widgets/pressable.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -38,9 +40,9 @@ class SettingsScreen extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: 8),
-        _sectionLabel('科目'),
+        _sectionLabel('教科'),
         _group([
-          _row(context, Icons.folder_outlined, AppColors.sageSoft, AppColors.sage, '科目（プロジェクト）の管理', '追加・編集・削除、テスト期間の設定', () => showSubjectsSheet(context)),
+          _row(context, Icons.folder_outlined, AppColors.sageSoft, AppColors.sage, '教科の管理', '追加・編集・削除', () => showSubjectsSheet(context)),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('忘却曲線'),
@@ -56,19 +58,7 @@ class SettingsScreen extends StatelessWidget {
         const SizedBox(height: 8),
         _sectionLabel('アプリ情報'),
         _group([
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-            child: Row(children: [
-              Container(width: 30, height: 30, decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(9)), child: const Icon(Icons.info_outline, size: 15, color: AppColors.inkSoft)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('StudySync', style: AppTheme.body(14, weight: FontWeight.w700)),
-                  Text('Flutter版 v0.1', style: AppTheme.body(11.5, color: AppColors.inkSoft)),
-                ]),
-              ),
-            ]),
-          ),
+          _row(context, Icons.info_outline, AppColors.surface2, AppColors.inkSoft, 'StudySync', '$kAppVersion・変更履歴を見る', () => showChangelogSheet(context)),
         ]),
       ],
     );
