@@ -122,6 +122,20 @@ class HomeScreen extends StatelessWidget {
       ];
     }
 
+    if (state.statusFilter == StatusFilter.byDeadline) {
+      // 締切が近い順：科目で分けず、フラットに期限の近い順で並べる
+      final sorted = [...list]..sort((a, b) => a.due.compareTo(b.due));
+      return sorted
+          .map((t) => TaskCard(
+                task: t,
+                project: state.projectById(t.projectId),
+                onTap: () => showTaskDetailSheet(context, t.id),
+                onToggle: () => state.toggleComplete(t.id),
+                onTimer: () => showTimerSheet(context, t.id),
+              ))
+          .toList();
+    }
+
     final Map<String, List<Task>> groups = {};
     final order = <String>[];
     for (final t in list) {

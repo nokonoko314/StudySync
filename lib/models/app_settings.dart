@@ -11,8 +11,11 @@ class AppSettings {
   bool notifGranted;
   bool notifReminders;
   bool notifDeadline;
-  int reminderHour; // 通知時刻（時）。既定 20:00
-  int reminderMinute; // 通知時刻（分）
+  int reviewLeadMinutes; // 復習タスク：期限の何分前に知らせるか。既定60分
+  int deadlineLeadMinutes; // 通常タスク：期限の何分前に知らせるか。既定180分
+  List<String> knownGroups; // 一度使ったグループ名を覚えておき、次回から候補として出す
+  int defaultDueHour; // 新規タスク作成時の既定の期限時刻（時）。既定23時
+  int defaultDueMinute; // 新規タスク作成時の既定の期限時刻（分）
   WallpaperType wallpaperType;
   int? wallpaperColor; // Color.value
   String? wallpaperImagePath; // ローカルに保存した画像のパス
@@ -27,13 +30,17 @@ class AppSettings {
     this.notifGranted = false,
     this.notifReminders = true,
     this.notifDeadline = true,
-    this.reminderHour = 20,
-    this.reminderMinute = 0,
+    this.reviewLeadMinutes = 60,
+    this.deadlineLeadMinutes = 180,
+    List<String>? knownGroups,
+    this.defaultDueHour = 23,
+    this.defaultDueMinute = 0,
     this.wallpaperType = WallpaperType.defaultBg,
     this.wallpaperColor,
     this.wallpaperImagePath,
   })  : navOrder = navOrder ?? ['home', 'calendar', 'stats', 'settings'],
-        globalIntervals = globalIntervals ?? [1, 3, 7, 14, 30];
+        globalIntervals = globalIntervals ?? [1, 3, 7, 14, 30],
+        knownGroups = knownGroups ?? [];
 
   Map<String, dynamic> toJson() => {
         'fontScale': fontScale,
@@ -45,8 +52,11 @@ class AppSettings {
         'notifGranted': notifGranted,
         'notifReminders': notifReminders,
         'notifDeadline': notifDeadline,
-        'reminderHour': reminderHour,
-        'reminderMinute': reminderMinute,
+        'reviewLeadMinutes': reviewLeadMinutes,
+        'deadlineLeadMinutes': deadlineLeadMinutes,
+        'knownGroups': knownGroups,
+        'defaultDueHour': defaultDueHour,
+        'defaultDueMinute': defaultDueMinute,
         'wallpaperType': wallpaperType.index,
         'wallpaperColor': wallpaperColor,
         'wallpaperImagePath': wallpaperImagePath,
@@ -65,8 +75,11 @@ class AppSettings {
         notifGranted: json['notifGranted'] as bool? ?? false,
         notifReminders: json['notifReminders'] as bool? ?? true,
         notifDeadline: json['notifDeadline'] as bool? ?? true,
-        reminderHour: json['reminderHour'] as int? ?? 20,
-        reminderMinute: json['reminderMinute'] as int? ?? 0,
+        reviewLeadMinutes: json['reviewLeadMinutes'] as int? ?? 60,
+        deadlineLeadMinutes: json['deadlineLeadMinutes'] as int? ?? 180,
+        knownGroups: (json['knownGroups'] as List?)?.map((e) => e as String).toList(),
+        defaultDueHour: json['defaultDueHour'] as int? ?? 23,
+        defaultDueMinute: json['defaultDueMinute'] as int? ?? 0,
         wallpaperType:
             WallpaperType.values[json['wallpaperType'] as int? ?? 0],
         wallpaperColor: json['wallpaperColor'] as int?,

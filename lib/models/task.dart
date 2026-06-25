@@ -1,16 +1,19 @@
 /// 1回分の学習記録（タイマーで計測した1セッション）。
 class StudySession {
+  final String id;
   final DateTime date;
   final int durationSeconds;
 
-  StudySession({required this.date, required this.durationSeconds});
+  StudySession({required this.id, required this.date, required this.durationSeconds});
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'date': date.millisecondsSinceEpoch,
         'duration': durationSeconds,
       };
 
   factory StudySession.fromJson(Map<String, dynamic> json) => StudySession(
+        id: json['id'] as String? ?? '${json['date']}_${json['duration']}',
         date: DateTime.fromMillisecondsSinceEpoch(json['date'] as int),
         durationSeconds: json['duration'] as int,
       );

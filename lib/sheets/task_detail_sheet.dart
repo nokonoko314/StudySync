@@ -162,13 +162,38 @@ class _TaskDetailBody extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Column(
-                    children: ([...t.sessions]..sort((a, b) => b.date.compareTo(a.date))).take(6).map((s) {
+                    children: ([...t.sessions]..sort((a, b) => b.date.compareTo(a.date))).take(8).map((s) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 5),
                         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                           Text('${s.date.month}/${s.date.day} ${pad2(s.date.hour)}:${pad2(s.date.minute)}',
                               style: AppTheme.body(12, color: AppColors.inkSoft)),
-                          Text(formatDuration(s.durationSeconds), style: AppTheme.mono(12, weight: FontWeight.w700)),
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Text(formatDuration(s.durationSeconds), style: AppTheme.mono(12, weight: FontWeight.w700)),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('記録を削除'),
+                                    content: Text('${s.date.month}/${s.date.day} ${pad2(s.date.hour)}:${pad2(s.date.minute)} の記録（${formatDuration(s.durationSeconds)}）を削除しますか？'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('キャンセル')),
+                                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('削除', style: TextStyle(color: AppColors.coral))),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  state.deleteSession(t.id, s.id);
+                                }
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.all(2),
+                                child: Icon(Icons.close, size: 14, color: AppColors.inkFaint),
+                              ),
+                            ),
+                          ]),
                         ]),
                       );
                     }).toList(),

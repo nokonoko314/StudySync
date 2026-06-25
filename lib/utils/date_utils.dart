@@ -1,5 +1,5 @@
-/// 日付・時間のフォーマット用ユーティリティ。
-/// HTML プロトタイプの formatDueLabel / formatDuration などと同じ仕様です。
+// 日付・時間のフォーマット用ユーティリティ。
+// HTML プロトタイプの formatDueLabel / formatDuration などと同じ仕様です。
 
 const List<String> weekdaysJp = ['日', '月', '火', '水', '木', '金', '土'];
 

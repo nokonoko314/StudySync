@@ -25,6 +25,19 @@ class SettingsScreen extends StatelessWidget {
           _row(context, Icons.tune, AppColors.goldSoft, AppColors.gold, 'UIの配置', 'ナビゲーションの並び順を変更', () => showLayoutSheet(context)),
         ]),
         const SizedBox(height: 8),
+        _sectionLabel('タスク'),
+        _group([
+          _row(
+            context,
+            Icons.schedule_outlined,
+            AppColors.indigoSoft,
+            AppColors.indigo,
+            'タスクの既定の期限時刻',
+            '新規タスク作成時、今日の${_timeLabel(state.settings.defaultDueHour, state.settings.defaultDueMinute)}を既定値にします',
+            () => _pickDefaultDueTime(context, state),
+          ),
+        ]),
+        const SizedBox(height: 8),
         _sectionLabel('科目'),
         _group([
           _row(context, Icons.folder_outlined, AppColors.sageSoft, AppColors.sage, '科目（プロジェクト）の管理', '追加・編集・削除、テスト期間の設定', () => showSubjectsSheet(context)),
@@ -62,6 +75,20 @@ class SettingsScreen extends StatelessWidget {
   }
 
   String _fontLabel(double v) => {0.875: '小', 1.0: '標準', 1.125: '大', 1.25: '特大'}[v] ?? '標準';
+
+  String _timeLabel(int h, int m) => '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+
+  Future<void> _pickDefaultDueTime(BuildContext context, AppState state) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: state.settings.defaultDueHour, minute: state.settings.defaultDueMinute),
+    );
+    if (picked == null) return;
+    state.updateSettings((s) {
+      s.defaultDueHour = picked.hour;
+      s.defaultDueMinute = picked.minute;
+    });
+  }
 
   Widget _sectionLabel(String t) => Padding(
         padding: const EdgeInsets.fromLTRB(2, 14, 2, 8),

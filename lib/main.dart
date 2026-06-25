@@ -6,7 +6,7 @@ import 'firebase_options.dart';
 import 'state/app_state.dart';
 import 'app_theme.dart';
 import 'services/notification_service.dart';
-import 'screens/root_shell.dart';
+import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +44,7 @@ class StudySyncApp extends StatelessWidget {
             child: child!,
           );
         },
-        home: const RootShell(),
+        home: const SplashScreen(),
       ),
     );
   }

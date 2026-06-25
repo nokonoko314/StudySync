@@ -10,7 +10,7 @@ import '../services/seed_data.dart';
 
 enum AppScreen { home, calendar, stats, settings }
 
-enum StatusFilter { incomplete, completed, overdue, reviewOnly, all }
+enum StatusFilter { incomplete, completed, overdue, reviewOnly, all, byDeadline }
 
 extension StatusFilterLabel on StatusFilter {
   String get label {
@@ -25,6 +25,8 @@ extension StatusFilterLabel on StatusFilter {
         return '復習のみ';
       case StatusFilter.all:
         return 'すべて';
+      case StatusFilter.byDeadline:
+        return '締切が近い順';
     }
   }
 }
@@ -52,50 +54,60 @@ class AppState extends ChangeNotifier {
       '${prefix}_${_uidCounter++}_${DateTime.now().microsecondsSinceEpoch}';
 
   Future<void> load() async {
-    final user = FirebaseAuth.instance.currentUser;
-    var handled = false;
-    if (user != null) {
-      // 前回ログイン済みのままアプリを再起動した場合：まずクラウドの
-      // データを優先して取り込む（他端末での変更を反映するため）。
-      // オフライン等で失敗した場合は、ローカルの保存データにフォールバックする。
-      try {
-        final cloud = await SyncService.pull(user.uid);
-        if (cloud != null) {
-          projects = cloud.projects;
-          tasks = cloud.tasks;
-          settings = cloud.settings;
-          settings.googleConnected = true;
-          settings.googleEmail = user.email ?? '';
-          await PersistenceService.save(projects, tasks, settings);
-          handled = true;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      var handled = false;
+      if (user != null) {
+        // 前回ログイン済みのままアプリを再起動した場合：まずクラウドの
+        // データを優先して取り込む（他端末での変更を反映するため）。
+        // オフライン等で失敗した場合は、ローカルの保存データにフォールバックする。
+        try {
+          final cloud = await SyncService.pull(user.uid);
+          if (cloud != null) {
+            projects = cloud.projects;
+            tasks = cloud.tasks;
+            settings = cloud.settings;
+            settings.googleConnected = true;
+            settings.googleEmail = user.email ?? '';
+            await PersistenceService.save(projects, tasks, settings);
+            handled = true;
+          }
+        } catch (e) {
+          debugPrint('[AppState.load] cloud pull failed: $e');
+          // オフラインなどでクラウド取得に失敗 → ローカルデータで続行する
         }
-      } catch (_) {
-        // オフラインなどでクラウド取得に失敗 → ローカルデータで続行する
       }
-    }
 
-    if (!handled) {
-      final saved = await PersistenceService.load();
-      if (saved == null) {
+      if (!handled) {
+        final saved = await PersistenceService.load();
+        if (saved == null) {
+          seedDemoData(this);
+          await _persist();
+        } else {
+          projects = saved.projects;
+          tasks = saved.tasks;
+          settings = saved.settings;
+        }
+      }
+
+      // 端末を再起動した場合などに備え、起動時に通知予約を設定内容に
+      // 合わせて再適用しておく。失敗しても起動自体は止めない。
+      try {
+        await NotificationService.rescheduleAll(tasks, settings);
+      } catch (e) {
+        debugPrint('[AppState.load] notification schedule failed: $e');
+      }
+    } catch (e, st) {
+      debugPrint('[AppState.load] unexpected error: $e\n$st');
+      if (projects.isEmpty && tasks.isEmpty) {
         seedDemoData(this);
-        await _persist();
-      } else {
-        projects = saved.projects;
-        tasks = saved.tasks;
-        settings = saved.settings;
       }
+    } finally {
+      // ここを必ず通すことで、どこかで失敗してもアプリが
+      // 「読み込み中」のまま固まらないようにしている。
+      _loaded = true;
+      notifyListeners();
     }
-
-    // 端末を再起動した場合などに備え、起動時に通知予約を設定内容に
-    // 合わせて再適用しておく。
-    await NotificationService.scheduleDailyReminder(
-      hour: settings.reminderHour,
-      minute: settings.reminderMinute,
-      enabled: settings.notifGranted && (settings.notifReminders || settings.notifDeadline),
-    );
-
-    _loaded = true;
-    notifyListeners();
   }
 
   Future<void> _persist() async {
@@ -206,7 +218,9 @@ class AppState extends ChangeNotifier {
       intervals: intervals ?? settings.globalIntervals.toList(),
     );
     tasks.add(t);
+    if (group != null) registerGroup(group);
     _persist();
+    NotificationService.scheduleForTask(t, settings).catchError((_) {});
     notifyListeners();
     return t;
   }
@@ -229,16 +243,19 @@ class AppState extends ChangeNotifier {
       t.group = null;
     } else if (group != null) {
       t.group = group;
+      registerGroup(group);
     }
     if (due != null) t.due = due;
     if (notes != null) t.notes = notes;
     if (autoReview != null) t.autoReview = autoReview;
     if (intervals != null) t.intervals = intervals;
     _persist();
+    NotificationService.scheduleForTask(t, settings).catchError((_) {});
     notifyListeners();
   }
 
   void deleteTask(String id) {
+    NotificationService.cancelForTask(id).catchError((_) {});
     tasks.removeWhere((t) => t.id == id);
     _persist();
     notifyListeners();
@@ -266,13 +283,14 @@ class AppState extends ChangeNotifier {
       }
     }
     _persist();
+    NotificationService.scheduleForTask(t, settings).catchError((_) {});
     notifyListeners();
   }
 
   void _generateReviews(Task t) {
     for (final d in t.intervals) {
       final title = t.title.startsWith('復習：') ? t.title : '復習：${t.title}';
-      tasks.add(Task(
+      final review = Task(
         id: newId('task'),
         title: title,
         projectId: t.projectId,
@@ -282,7 +300,9 @@ class AppState extends ChangeNotifier {
         parentId: t.id,
         autoReview: false,
         intervals: const [],
-      ));
+      );
+      tasks.add(review);
+      NotificationService.scheduleForTask(review, settings).catchError((_) {});
     }
     t.reviewsGenerated = true;
   }
@@ -291,13 +311,25 @@ class AppState extends ChangeNotifier {
   void commitSession(String taskId, int durationSeconds) {
     if (durationSeconds <= 0) return;
     final t = tasks.firstWhere((t) => t.id == taskId);
-    t.sessions.add(StudySession(date: DateTime.now(), durationSeconds: durationSeconds));
+    t.sessions.add(StudySession(id: newId('sess'), date: DateTime.now(), durationSeconds: durationSeconds));
     t.timeSpent += durationSeconds;
     _persist();
     notifyListeners();
   }
 
-  // ===================== UI filters / navigation =====================
+  /// 学習記録（タイマーのセッション）を1件削除する。
+  /// 間違って計測してしまった記録を取り消すために使う。
+  void deleteSession(String taskId, String sessionId) {
+    final t = tasks.firstWhere((t) => t.id == taskId);
+    final session = t.sessions.firstWhere((s) => s.id == sessionId, orElse: () => StudySession(id: '', date: DateTime.now(), durationSeconds: 0));
+    if (session.id.isEmpty) return;
+    t.sessions.removeWhere((s) => s.id == sessionId);
+    t.timeSpent = (t.timeSpent - session.durationSeconds).clamp(0, 1 << 31);
+    _persist();
+    notifyListeners();
+  }
+
+
 
   void setStatusFilter(StatusFilter f) {
     statusFilter = f;
@@ -332,6 +364,9 @@ class AppState extends ChangeNotifier {
         break;
       case StatusFilter.all:
         break;
+      case StatusFilter.byDeadline:
+        list = list.where((t) => !t.completed).toList();
+        break;
     }
     return list;
   }
@@ -346,6 +381,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 通知関連の設定（許可状態・リード時間など）を変更した直後に呼ぶ。
+  /// 全タスクの通知予約をその場で作り直す。
+  Future<void> rescheduleAllNotifications() async {
+    try {
+      await NotificationService.rescheduleAll(tasks, settings);
+    } catch (e) {
+      debugPrint('[AppState.rescheduleAllNotifications] failed: $e');
+    }
+  }
+
   void reorderNav(int oldIndex, int newIndex) {
     if (newIndex < 0 || newIndex >= settings.navOrder.length) return;
     final item = settings.navOrder.removeAt(oldIndex);
@@ -358,5 +403,27 @@ class AppState extends ChangeNotifier {
     settings.navOrder = ['home', 'calendar', 'stats', 'settings'];
     _persist();
     notifyListeners();
+  }
+
+  /// グループ名を「使ったことがある候補」として記録する。
+  /// 一度使えば、別のタスク・別の科目でも次から候補に出てくるようになる。
+  void registerGroup(String group) {
+    final trimmed = group.trim();
+    if (trimmed.isEmpty || settings.knownGroups.contains(trimmed)) return;
+    settings.knownGroups.add(trimmed);
+    _persist();
+    notifyListeners();
+  }
+
+  void removeKnownGroup(String group) {
+    settings.knownGroups.remove(group);
+    _persist();
+    notifyListeners();
+  }
+
+  /// 新規タスク作成時の既定の期限日時（今日の、設定された既定時刻）。
+  DateTime defaultDueDate() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, settings.defaultDueHour, settings.defaultDueMinute);
   }
 }

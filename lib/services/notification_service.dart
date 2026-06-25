@@ -1,25 +1,24 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
+import '../models/task.dart';
+import '../models/app_settings.dart';
 
 /// 端末への実際の通知（ローカル通知）を管理するサービス。
-/// 「毎日この時刻に知らせる」という、設定でユーザーが選んだ通知時刻に
-/// 合わせた繰り返し通知を1件スケジュールします。
 ///
-/// permission_handler でOSの通知許可状態を確認・表示する一方、
-/// 実際に通知を「送る」のはこのサービス（flutter_local_notifications）が
-/// 担当します。
+/// 設計：タスク1件につき通知を1件、「期限の何分前に知らせるか」
+/// （復習タスクと通常タスクで別々に設定可能）に合わせて予約します。
+/// タスクが追加・編集・削除・完了になるたびに、AppState側から
+/// このサービスの該当メソッドが呼ばれ、予約が更新されます。
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
-  static const int _dailyReminderId = 1001;
-
   static Future<void> init() async {
     if (_initialized) return;
     tzdata.initializeTimeZones();
-    
+
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false, // 許可リクエストは permission_handler 側で行う
@@ -32,43 +31,73 @@ class NotificationService {
     _initialized = true;
   }
 
-  /// 毎日 [hour]:[minute] に繰り返し通知を送るよう設定する。
-  /// [enabled] が false の場合は、既存の予約をキャンセルするだけ。
-  static Future<void> scheduleDailyReminder({
-    required int hour,
-    required int minute,
-    required bool enabled,
-  }) async {
+  /// タスクのidから、通知用の安定したint IDを作る（正の値に丸める）。
+  static int _notificationIdFor(String taskId) => taskId.hashCode & 0x7FFFFFFF;
+
+  /// このタスクの通知を取り消す。
+  static Future<void> cancelForTask(String taskId) async {
     await init();
-    await _plugin.cancel(id: _dailyReminderId);
+    await _plugin.cancel(id: _notificationIdFor(taskId));
+  }
+
+  /// 設定にもとづいて、このタスクの通知を予約し直す
+  /// （いったん取り消してから、必要であれば新しく予約する）。
+  static Future<void> scheduleForTask(Task task, AppSettings settings) async {
+    await init();
+    final id = _notificationIdFor(task.id);
+    await _plugin.cancel(id: id);
+
+    if (!settings.notifGranted || task.completed) return;
+
+    final enabled = task.isReview ? settings.notifReminders : settings.notifDeadline;
     if (!enabled) return;
 
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
+    final leadMinutes = task.isReview ? settings.reviewLeadMinutes : settings.deadlineLeadMinutes;
+    final notifyAt = task.due.subtract(Duration(minutes: leadMinutes));
+    final now = DateTime.now();
+    if (notifyAt.isBefore(now.add(const Duration(seconds: 5)))) {
+      // 通知予定時刻がもう過ぎている（または近すぎる）場合は予約しない
+      return;
     }
 
+    final scheduled = tz.TZDateTime.from(notifyAt, tz.local);
+    final title = task.isReview ? '復習リマインダー' : '期限が近づいています';
+    final body = task.isReview ? '「${task.title}」の復習予定です。' : '「${task.title}」の期限が近づいています。';
+
     await _plugin.zonedSchedule(
-      id: _dailyReminderId,
-      title: 'StudySync',
-      body: '今日の学習タスクと復習を確認しましょう。',
+      id: id,
+      title: title,
+      body: body,
       scheduledDate: scheduled,
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
-          'studysync_daily',
-          '学習リマインダー',
-          channelDescription: '設定した時刻に毎日届く学習リマインダー通知です',
-          importance: Importance.defaultImportance,
+          'studysync_task',
+          'タスクの通知',
+          channelDescription: 'タスクの期限・復習が近づいたときに届く通知です',
+          importance: Importance.high,
+          priority: Priority.high,
         ),
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
+  /// 全タスクぶん、通知予約をまとめて作り直す
+  /// （アプリ起動時や、通知の設定を変更した直後に呼ぶ）。
+  static Future<void> rescheduleAll(List<Task> tasks, AppSettings settings) async {
+    await init();
+    for (final t in tasks) {
+      try {
+        await scheduleForTask(t, settings);
+      } catch (_) {
+        // 1件失敗しても他のタスクの予約は続ける
+      }
+    }
+  }
+
   static Future<void> cancelAll() async {
+    await init();
     await _plugin.cancelAll();
   }
 }

@@ -73,8 +73,8 @@ void seedDemoData(AppState state) {
       notes: '加法定理と倍角の公式を中心に復習する。',
       timeSpent: 1860,
       sessions: [
-        StudySession(date: _daysFromNow(-1, 20, 0), durationSeconds: 1260),
-        StudySession(date: _daysFromNow(0, 8, 0), durationSeconds: 600),
+        StudySession(id: state.newId('sess'), date: _daysFromNow(-1, 20, 0), durationSeconds: 1260),
+        StudySession(id: state.newId('sess'), date: _daysFromNow(0, 8, 0), durationSeconds: 600),
       ]);
   final t2 = mk('数列の漸化式 演習プリント', pMath, group: '小テスト対策', due: _daysFromNow(1, 21, 0));
   final t3 = mk('ベクトルの内積 章末問題', pMath, due: _daysFromNow(-1, 18, 0));
@@ -83,7 +83,7 @@ void seedDemoData(AppState state) {
       completed: true,
       timeSpent: 2700,
       sessions: [
-        StudySession(date: _daysFromNow(-4, 17, 30), durationSeconds: 2700)
+        StudySession(id: state.newId('sess'), date: _daysFromNow(-4, 17, 30), durationSeconds: 2700)
       ],
       reviewsGenerated: true);
 
@@ -95,7 +95,7 @@ void seedDemoData(AppState state) {
       completed: true,
       timeSpent: 1500,
       sessions: [
-        StudySession(date: _daysFromNow(-6, 19, 0), durationSeconds: 1500)
+        StudySession(id: state.newId('sess'), date: _daysFromNow(-6, 19, 0), durationSeconds: 1500)
       ],
       reviewsGenerated: true);
 
@@ -103,7 +103,7 @@ void seedDemoData(AppState state) {
       due: _daysFromNow(4, 18, 0),
       timeSpent: 600,
       sessions: [
-        StudySession(date: _daysFromNow(-1, 16, 0), durationSeconds: 600)
+        StudySession(id: state.newId('sess'), date: _daysFromNow(-1, 16, 0), durationSeconds: 600)
       ]);
   final t9 = mk('力学 基礎問題集 p.20', pPhys, due: _daysFromNow(9, 18, 0));
 
@@ -146,9 +146,16 @@ void seedDemoData(AppState state) {
     final t = pool[i % pool.length];
     final dur = 600 + _rnd.nextInt(2400);
     t.sessions.add(
-        StudySession(date: _daysFromNow(-i, 16 + (i % 4), 0), durationSeconds: dur));
+        StudySession(id: state.newId('sess'), date: _daysFromNow(-i, 16 + (i % 4), 0), durationSeconds: dur));
     t.timeSpent += dur;
   }
 
   state.tasks = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, r1, r2, r3];
+
+  // デモデータで使っているグループ名を、最初から候補として登録しておく
+  for (final t in state.tasks) {
+    if (t.group != null && !state.settings.knownGroups.contains(t.group)) {
+      state.settings.knownGroups.add(t.group!);
+    }
+  }
 }

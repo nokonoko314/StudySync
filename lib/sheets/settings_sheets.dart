@@ -10,13 +10,11 @@ import '../state/app_state.dart';
 import '../models/app_settings.dart';
 import '../app_theme.dart';
 import '../nav_meta.dart';
-import '../utils/date_utils.dart';
 import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
 import '../widgets/interval_chip_editor.dart';
 import '../widgets/forgetting_curve_chart.dart';
 import '../services/wallpaper_file_service.dart';
-import '../services/notification_service.dart';
 
 // =====================================================================
 // 壁紙
@@ -449,6 +447,13 @@ void showNotificationSheet(BuildContext context) {
 class _NotificationBody extends StatelessWidget {
   const _NotificationBody();
 
+  static const _presets = [15, 30, 60, 180, 1440];
+  static String _presetLabel(int m) {
+    if (m < 60) return '$m分前';
+    if (m < 1440) return '${m ~/ 60}時間前';
+    return '前日';
+  }
+
   Future<void> _togglePermission(BuildContext context, AppState state) async {
     if (state.settings.notifGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -457,40 +462,11 @@ class _NotificationBody extends StatelessWidget {
     }
     final status = await Permission.notification.request();
     state.updateSettings((s) => s.notifGranted = status.isGranted);
-    await _reschedule(state);
+    await state.rescheduleAllNotifications();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(status.isGranted ? '通知を許可しました' : '通知が拒否されました'),
       backgroundColor: status.isGranted ? AppColors.ink : AppColors.coral,
-    ));
-  }
-
-  Future<void> _reschedule(AppState state) async {
-    final enabled = state.settings.notifGranted &&
-        (state.settings.notifReminders || state.settings.notifDeadline);
-    await NotificationService.scheduleDailyReminder(
-      hour: state.settings.reminderHour,
-      minute: state.settings.reminderMinute,
-      enabled: enabled,
-    );
-  }
-
-  Future<void> _pickTime(BuildContext context, AppState state) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: state.settings.reminderHour, minute: state.settings.reminderMinute),
-    );
-    if (picked == null) return;
-    state.updateSettings((s) {
-      s.reminderHour = picked.hour;
-      s.reminderMinute = picked.minute;
-    });
-    await _reschedule(state);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('通知時刻を${pad2(picked.hour)}:${pad2(picked.minute)}に設定しました'),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: AppColors.ink,
     ));
   }
 
@@ -501,23 +477,47 @@ class _NotificationBody extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _toggleRow(context, '通知を許可', '現在の状態：${state.settings.notifGranted ? "許可済み" : "未設定"}',
               state.settings.notifGranted, (_) => _togglePermission(context, state)),
-          _timeRow(context, state),
-          _toggleRow(context, '復習リマインダー', '復習タスクの期限が近づいたら知らせる',
-              state.settings.notifReminders, (v) async {
-            state.updateSettings((s) => s.notifReminders = v);
-            await _reschedule(state);
-          }),
-          _toggleRow(context, '期限が近いタスク', '通常タスクの期限前にも知らせる',
-              state.settings.notifDeadline, (v) async {
-            state.updateSettings((s) => s.notifDeadline = v);
-            await _reschedule(state);
-          }),
+          const SizedBox(height: 6),
+          _categorySection(
+            context,
+            state,
+            title: '復習リマインダー',
+            sub: '復習タスクの期限が近づいたら知らせる',
+            enabled: state.settings.notifReminders,
+            leadMinutes: state.settings.reviewLeadMinutes,
+            onToggle: (v) async {
+              state.updateSettings((s) => s.notifReminders = v);
+              await state.rescheduleAllNotifications();
+            },
+            onPickLead: (m) async {
+              state.updateSettings((s) => s.reviewLeadMinutes = m);
+              await state.rescheduleAllNotifications();
+            },
+          ),
+          const SizedBox(height: 18),
+          _categorySection(
+            context,
+            state,
+            title: '期限が近いタスク',
+            sub: '通常タスクの期限前にも知らせる',
+            enabled: state.settings.notifDeadline,
+            leadMinutes: state.settings.deadlineLeadMinutes,
+            onToggle: (v) async {
+              state.updateSettings((s) => s.notifDeadline = v);
+              await state.rescheduleAllNotifications();
+            },
+            onPickLead: (m) async {
+              state.updateSettings((s) => s.deadlineLeadMinutes = m);
+              await state.rescheduleAllNotifications();
+            },
+          ),
           if (!state.settings.notifGranted) ...[
-            const SizedBox(height: 10),
-            Text('※ 通知を許可すると、上で設定した時刻に毎日リマインダーが届きます。',
+            const SizedBox(height: 14),
+            Text('※ 通知を許可すると、タスクごとに設定した時間だけ前に知らせが届きます。',
                 style: AppTheme.body(11.5, color: AppColors.inkFaint)),
           ],
         ],
@@ -525,28 +525,54 @@ class _NotificationBody extends StatelessWidget {
     );
   }
 
-  Widget _timeRow(BuildContext context, AppState state) {
-    final timeLabel = '${pad2(state.settings.reminderHour)}:${pad2(state.settings.reminderMinute)}';
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 11),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('通知時刻', style: AppTheme.body(14, weight: FontWeight.w700)),
-            Text('毎日この時刻にまとめて知らせます', style: AppTheme.body(11.5, color: AppColors.inkSoft)),
-          ]),
-        ),
-        Pressable(
-          onTap: () => _pickTime(context, state),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-            decoration: BoxDecoration(
-                color: AppColors.surface2, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.line)),
-            child: Text(timeLabel, style: AppTheme.mono(14, weight: FontWeight.w700)),
+  Widget _categorySection(
+    BuildContext context,
+    AppState state, {
+    required String title,
+    required String sub,
+    required bool enabled,
+    required int leadMinutes,
+    required ValueChanged<bool> onToggle,
+    required ValueChanged<int> onPickLead,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: AppTheme.body(14, weight: FontWeight.w700)),
+              Text(sub, style: AppTheme.body(11.5, color: AppColors.inkSoft)),
+            ]),
           ),
-        ),
-      ]),
+          CupertinoSwitch(value: enabled, activeColor: AppColors.sage, onChanged: onToggle),
+        ]),
+        if (enabled) ...[
+          const SizedBox(height: 10),
+          Text('何分前に知らせるか', style: AppTheme.body(11.5, weight: FontWeight.w700, color: AppColors.inkSoft)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: _presets.map((m) {
+              final active = leadMinutes == m;
+              return Pressable(
+                onTap: () => onPickLead(m),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: active ? AppColors.indigo : AppColors.surface2,
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(color: active ? AppColors.indigo : AppColors.line),
+                  ),
+                  child: Text(_presetLabel(m),
+                      style: AppTheme.body(12.5, weight: FontWeight.w700, color: active ? Colors.white : AppColors.inkSoft)),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
     );
   }
 

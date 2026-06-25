@@ -51,6 +51,7 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
       _projectId = widget.projectIdHint ?? (state.projects.isNotEmpty ? state.projects.first.id : null);
       _autoReview = state.settings.globalAutoReview;
       _intervals = [...state.settings.globalIntervals];
+      _due = state.defaultDueDate();
     }
   }
 
@@ -127,11 +128,7 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final groupOptions = state.tasks
-        .where((t) => t.projectId == _projectId && t.group != null)
-        .map((t) => t.group!)
-        .toSet()
-        .toList();
+    final groupOptions = state.settings.knownGroups;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
@@ -164,24 +161,32 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
           ]),
           const SizedBox(height: 16),
           _label('グループ（任意）'),
-          TextField(controller: _groupCtrl, decoration: _decoration('例：小テスト対策')),
+          TextField(controller: _groupCtrl, decoration: _decoration('例：期末試験')),
           if (groupOptions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: groupOptions
-                    .map((g) => Pressable(
-                          onTap: () => setState(() => _groupCtrl.text = g),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                            decoration:
-                                BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99)),
-                            child: Text(g, style: AppTheme.body(11, color: AppColors.inkSoft)),
-                          ),
-                        ))
-                    .toList(),
+                children: groupOptions.map((g) {
+                  return Container(
+                    padding: const EdgeInsets.only(left: 10, right: 4, top: 3, bottom: 3),
+                    decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Pressable(
+                        onTap: () => setState(() => _groupCtrl.text = g),
+                        child: Text(g, style: AppTheme.body(11, color: AppColors.inkSoft)),
+                      ),
+                      Pressable(
+                        onTap: () => context.read<AppState>().removeKnownGroup(g),
+                        child: const Padding(
+                          padding: EdgeInsets.all(5),
+                          child: Icon(Icons.close, size: 11, color: AppColors.inkFaint),
+                        ),
+                      ),
+                    ]),
+                  );
+                }).toList(),
               ),
             ),
           const SizedBox(height: 16),
