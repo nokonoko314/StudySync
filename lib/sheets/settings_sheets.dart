@@ -15,6 +15,7 @@ import '../widgets/pressable.dart';
 import '../widgets/interval_chip_editor.dart';
 import '../widgets/forgetting_curve_chart.dart';
 import '../services/wallpaper_file_service.dart';
+import '../services/notification_service.dart';
 
 // =====================================================================
 // 壁紙
@@ -520,6 +521,28 @@ class _NotificationBody extends StatelessWidget {
             const SizedBox(height: 14),
             Text('※ 通知を許可すると、タスクごとに設定した時間だけ前に知らせが届きます。',
                 style: AppTheme.body(11.5, color: AppColors.inkFaint)),
+          ] else ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await NotificationService.sendTestNotification(afterSeconds: 10);
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('10秒後にテスト通知を送ります。アプリを閉じて待ってみてください。'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: AppColors.ink,
+                  ));
+                },
+                icon: const Icon(Icons.notifications_active_outlined, size: 16, color: AppColors.indigo),
+                label: Text('10秒後にテスト通知を送る', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.indigo)),
+                style: OutlinedButton.styleFrom(backgroundColor: AppColors.indigoSoft, side: BorderSide.none, padding: const EdgeInsets.symmetric(vertical: 13)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text('※ 通知の仕組みそのものが動くかどうかだけを、タスクを作らずに確認できます。',
+                style: AppTheme.body(11, color: AppColors.inkFaint)),
           ],
         ],
       ),

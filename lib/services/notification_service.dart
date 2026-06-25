@@ -104,4 +104,30 @@ class NotificationService {
     await init();
     await _plugin.cancelAll();
   }
+
+  /// 動作確認用のテスト通知。指定した秒数後に1件だけ通知を送る。
+  /// タスクの期限を待たずに、通知の仕組みそのものが動くかすぐ確認できる。
+  static Future<void> sendTestNotification({int afterSeconds = 10}) async {
+    await init();
+    const testId = 999999;
+    await _plugin.cancel(id: testId);
+    final scheduled = tz.TZDateTime.now(tz.local).add(Duration(seconds: afterSeconds));
+    await _plugin.zonedSchedule(
+      id: testId,
+      title: 'StudySync テスト通知',
+      body: 'この通知が届けば、通知の仕組みは正常に動いています。',
+      scheduledDate: scheduled,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'studysync_task',
+          'タスクの通知',
+          channelDescription: 'タスクの期限・復習が近づいたときに届く通知です',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+    );
+  }
 }
