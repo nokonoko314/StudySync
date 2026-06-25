@@ -1,4 +1,4 @@
-name: flutter_application_1
+name: StudySync
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -32,6 +32,9 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  flutter:
+     assets:
+       - assets/icon/icon.png
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
