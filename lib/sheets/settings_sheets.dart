@@ -527,13 +527,55 @@ class _NotificationBody extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  await NotificationService.sendTestNotification(afterSeconds: 10);
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('10秒後にテスト通知を送ります。アプリを閉じて待ってみてください。'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: AppColors.ink,
-                  ));
+                  try {
+                    await NotificationService.showImmediateTestNotification();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('今すぐ通知を出しました。通知トレイを確認してください。'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppColors.ink,
+                    ));
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('即時通知に失敗しました'),
+                        content: SingleChildScrollView(child: Text(e.toString())),
+                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.flash_on_outlined, size: 16, color: AppColors.sage),
+                label: Text('今すぐテスト通知を出す（予約なし）', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.sage)),
+                style: OutlinedButton.styleFrom(backgroundColor: AppColors.sageSoft, side: BorderSide.none, padding: const EdgeInsets.symmetric(vertical: 13)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  try {
+                    await NotificationService.sendTestNotification(afterSeconds: 10);
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('10秒後にテスト通知を送ります。アプリを閉じて待ってみてください。'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppColors.ink,
+                    ));
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('テスト通知の予約に失敗しました'),
+                        content: SingleChildScrollView(child: Text(e.toString())),
+                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+                      ),
+                    );
+                  }
                 },
                 icon: const Icon(Icons.notifications_active_outlined, size: 16, color: AppColors.indigo),
                 label: Text('10秒後にテスト通知を送る', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.indigo)),
@@ -543,6 +585,25 @@ class _NotificationBody extends StatelessWidget {
             const SizedBox(height: 8),
             Text('※ 通知の仕組みそのものが動くかどうかだけを、タスクを作らずに確認できます。',
                 style: AppTheme.body(11, color: AppColors.inkFaint)),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () async {
+                  final result = await NotificationService.diagnose();
+                  if (!context.mounted) return;
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('通知の診断情報'),
+                      content: SingleChildScrollView(child: SelectableText(result)),
+                      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+                    ),
+                  );
+                },
+                child: Text('診断情報を見る', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkFaint)),
+              ),
+            ),
           ],
         ],
       ),

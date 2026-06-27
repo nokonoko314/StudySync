@@ -32,7 +32,58 @@ class NotificationService {
     await _plugin.initialize(
       settings: const InitializationSettings(android: androidInit, iOS: iosInit),
     );
+
+    // チャンネルを明示的に作っておく。これをやらないと、最初の通知が
+    // 実際に発火するまでチャンネル自体がシステムの「通知」設定に
+    // 出てこないため、診断がしづらくなる。
+    //
+    // ここで resolvePlatformSpecificImplementation が null を返すと、
+    // 何も作られないまま黙って次に進んでしまう（?.だと気付けない）ので、
+    // 明示的にチェックして、失敗したらその場でわかるようにしている。
+    final androidPlugin =
+        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) {
+      throw Exception('AndroidFlutterLocalNotificationsPlugin が取得できませんでした（resolvePlatformSpecificImplementation が null）。');
+    }
+    const channel = AndroidNotificationChannel(
+      'studysync_task',
+      'タスクの通知',
+      description: 'タスクの期限・復習が近づいたときに届く通知です',
+      importance: Importance.high,
+    );
+    await androidPlugin.createNotificationChannel(channel);
+
     _initialized = true;
+  }
+
+  /// 診断用：今のチャンネル作成・プラグイン状態を文字列で返す。
+  /// 設定 → 通知 のテストボタンから呼び、結果をそのまま画面に表示する。
+  static Future<String> diagnose() async {
+    final buffer = StringBuffer();
+    try {
+      tzdata.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Tokyo'));
+      buffer.writeln('timezone OK: ${tz.local.name}');
+    } catch (e) {
+      buffer.writeln('timezone NG: $e');
+    }
+    try {
+      final androidPlugin =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      buffer.writeln('androidPlugin: ${androidPlugin == null ? "null（取得できていない）" : "OK"}');
+      if (androidPlugin != null) {
+        final channels = await androidPlugin.getNotificationChannels();
+        buffer.writeln('既存チャンネル数: ${channels?.length ?? 0}');
+        for (final c in channels ?? []) {
+          buffer.writeln('  - ${c.id} / ${c.name} / importance=${c.importance}');
+        }
+        final granted = await androidPlugin.areNotificationsEnabled();
+        buffer.writeln('areNotificationsEnabled: $granted');
+      }
+    } catch (e) {
+      buffer.writeln('androidPlugin check NG: $e');
+    }
+    return buffer.toString();
   }
 
   /// タスクのidから、通知用の安定したint IDを作る（正の値に丸める）。
@@ -128,6 +179,29 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+    );
+  }
+
+  /// 予約（AlarmManager）を一切使わず、今すぐその場で通知を出す。
+  /// 「予約の仕組み」と「通知を表示する仕組み」、どちらが悪いのかを
+  /// 切り分けるための、最もシンプルなテスト。
+  static Future<void> showImmediateTestNotification() async {
+    await init();
+    const testId = 999998;
+    await _plugin.show(
+      id: testId,
+      title: 'StudySync 即時テスト',
+      body: 'これが見えれば、通知を表示する仕組み自体は正常です。',
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'studysync_task',
+          'タスクの通知',
+          channelDescription: 'タスクの期限・復習が近づいたときに届く通知です',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
     );
   }
 }
