@@ -47,6 +47,9 @@ class AppState extends ChangeNotifier {
   AppScreen activeScreen = AppScreen.home;
   StatusFilter statusFilter = StatusFilter.incomplete;
   String? activeProjectId;
+  /// ドロワーの「プロジェクト」セクションで選んだ絞り込み（旧グループ名）。
+  /// 教科の絞り込み（activeProjectId）とは同時に1つだけ有効（片方を選ぶともう片方は解除される）。
+  String? activeGroupTag;
 
   bool _loaded = false;
   bool get loaded => _loaded;
@@ -355,6 +358,13 @@ class AppState extends ChangeNotifier {
 
   void setActiveProject(String? id) {
     activeProjectId = id;
+    if (id != null) activeGroupTag = null;
+    notifyListeners();
+  }
+
+  void setActiveGroupTag(String? tag) {
+    activeGroupTag = tag;
+    if (tag != null) activeProjectId = null;
     notifyListeners();
   }
 
@@ -364,8 +374,11 @@ class AppState extends ChangeNotifier {
   }
 
   List<Task> get filteredTasks {
-    var list =
-        tasks.where((t) => activeProjectId == null || t.projectId == activeProjectId).toList();
+    var list = tasks.where((t) {
+      if (activeProjectId != null && t.projectId != activeProjectId) return false;
+      if (activeGroupTag != null && t.group != activeGroupTag) return false;
+      return true;
+    }).toList();
     switch (statusFilter) {
       case StatusFilter.incomplete:
         list = list.where((t) => t.status == '未完了').toList();

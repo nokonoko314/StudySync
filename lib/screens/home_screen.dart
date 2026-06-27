@@ -18,6 +18,9 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final project = state.projectById(state.activeProjectId);
+    final groupTag = state.activeGroupTag;
+    final title = project?.name ?? groupTag ?? 'すべてのタスク';
+    final subtitle = project != null ? 'この教科のタスクを表示中' : (groupTag != null ? 'このプロジェクトのタスクを表示中' : '登録中のタスクと教科');
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -41,11 +44,8 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(project?.name ?? 'すべてのタスク', style: AppTheme.display(21)),
-                  Text(
-                    project != null ? 'この教科のタスクを表示中' : '登録中のタスクと教科',
-                    style: AppTheme.body(12, color: AppColors.inkSoft),
-                  ),
+                  Text(title, style: AppTheme.display(21)),
+                  Text(subtitle, style: AppTheme.body(12, color: AppColors.inkSoft)),
                   if (project != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -58,6 +58,22 @@ class HomeScreen extends StatelessWidget {
                             Text(project.name, style: AppTheme.body(11.5, weight: FontWeight.w700, color: AppColors.indigo)),
                             const SizedBox(width: 6),
                             const Icon(Icons.close, size: 11, color: AppColors.indigo),
+                          ]),
+                        ),
+                      ),
+                    )
+                  else if (groupTag != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Pressable(
+                        onTap: () => state.setActiveGroupTag(null),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(color: AppColors.coralSoft, borderRadius: BorderRadius.circular(99)),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Text(groupTag, style: AppTheme.body(11.5, weight: FontWeight.w700, color: AppColors.coral)),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.close, size: 11, color: AppColors.coral),
                           ]),
                         ),
                       ),
