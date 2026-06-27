@@ -27,9 +27,9 @@ class _AddEditTaskBody extends StatefulWidget {
 
 class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
   final _titleCtrl = TextEditingController();
-  final _groupCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   String? _projectId;
+  String? _group;
   DateTime _due = DateTime.now().add(const Duration(days: 1));
   bool _autoReview = true;
   List<int> _intervals = [1, 3, 7, 14, 30];
@@ -41,7 +41,12 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
     if (widget.taskId != null) {
       final t = state.taskById(widget.taskId!)!;
       _titleCtrl.text = t.title;
-      _groupCtrl.text = t.group ?? '';
+      _group = t.group;
+      // 過去に設定されていたが、その後候補一覧から削除された値でも
+      // ドロップダウンが落ちないよう、無ければ候補に補っておく。
+      if (_group != null && !state.settings.knownGroups.contains(_group)) {
+        state.registerGroup(_group!);
+      }
       _notesCtrl.text = t.notes;
       _projectId = t.projectId;
       _due = t.due;
@@ -58,7 +63,6 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _groupCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -97,7 +101,7 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
       _toast('教科を選択してください', error: true);
       return;
     }
-    final group = _groupCtrl.text.trim().isEmpty ? null : _groupCtrl.text.trim();
+    final group = _group;
     if (widget.taskId != null) {
       state.updateTask(
         widget.taskId!,
@@ -161,33 +165,27 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
           ]),
           const SizedBox(height: 16),
           _label('プロジェクト（任意）'),
-          TextField(controller: _groupCtrl, decoration: _decoration('例：期末試験')),
-          if (groupOptions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: groupOptions.map((g) {
-                  return Container(
-                    padding: const EdgeInsets.only(left: 10, right: 4, top: 3, bottom: 3),
-                    decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Pressable(
-                        onTap: () => setState(() => _groupCtrl.text = g),
-                        child: Text(g, style: AppTheme.body(11, color: AppColors.inkSoft)),
-                      ),
-                      Pressable(
-                        onTap: () => context.read<AppState>().removeKnownGroup(g),
-                        child: const Padding(
-                          padding: EdgeInsets.all(5),
-                          child: Icon(Icons.close, size: 11, color: AppColors.inkFaint),
-                        ),
-                      ),
-                    ]),
-                  );
-                }).toList(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: _boxDecoration(),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String?>(
+                value: _group,
+                isExpanded: true,
+                hint: Text('なし', style: AppTheme.body(14, color: AppColors.inkFaint)),
+                items: [
+                  DropdownMenuItem(value: null, child: Text('なし', style: AppTheme.body(14, color: AppColors.inkFaint))),
+                  ...groupOptions.map((g) => DropdownMenuItem(value: g, child: Text(g, style: AppTheme.body(14)))),
+                ],
+                onChanged: (v) => setState(() => _group = v),
               ),
+            ),
+          ),
+          if (groupOptions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text('候補がまだありません。設定 →「プロジェクトの管理」から追加できます。',
+                  style: AppTheme.body(11, color: AppColors.inkFaint)),
             ),
           const SizedBox(height: 16),
           _label('期限日時'),

@@ -9,13 +9,11 @@ import 'dart:io';
 import '../state/app_state.dart';
 import '../models/app_settings.dart';
 import '../app_theme.dart';
-import '../nav_meta.dart';
 import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
 import '../widgets/interval_chip_editor.dart';
 import '../widgets/forgetting_curve_chart.dart';
 import '../services/wallpaper_file_service.dart';
-import '../services/notification_service.dart';
 
 // =====================================================================
 // 壁紙
@@ -174,81 +172,6 @@ class _FontSizeBody extends StatelessWidget {
               const SizedBox(height: 8),
               Text('この大きさでアプリ内のテキストが表示されます', style: AppTheme.body(11, color: AppColors.inkSoft)),
             ]),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =====================================================================
-// UIの配置（ボトムナビの並び替え）
-// =====================================================================
-
-void showLayoutSheet(BuildContext context) {
-  showAppSheet(context, title: 'UIの配置', bodyBuilder: (ctx) => const _LayoutBody());
-}
-
-class _LayoutBody extends StatelessWidget {
-  const _LayoutBody();
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final order = state.settings.navOrder;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('下のナビゲーションに表示する順番を、矢印で並び替えできます。', style: AppTheme.body(12.5, color: AppColors.inkSoft)),
-          const SizedBox(height: 10),
-          ...order.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final key = entry.value;
-            final meta = kNavMeta[key]!;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(children: [
-                Text('${idx + 1}', style: AppTheme.mono(11, color: AppColors.inkFaint)),
-                const SizedBox(width: 10),
-                Icon(meta.icon, size: 16, color: AppColors.inkSoft),
-                const SizedBox(width: 8),
-                Expanded(child: Text(meta.label, style: AppTheme.body(13.5, weight: FontWeight.w700))),
-                Pressable(
-                  onTap: idx == 0 ? null : () => state.reorderNav(idx, idx - 1),
-                  child: Opacity(
-                    opacity: idx == 0 ? 0.3 : 1,
-                    child: Container(
-                      width: 26, height: 26,
-                      decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.keyboard_arrow_up, size: 16, color: AppColors.inkSoft),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Pressable(
-                  onTap: idx == order.length - 1 ? null : () => state.reorderNav(idx, idx + 1),
-                  child: Opacity(
-                    opacity: idx == order.length - 1 ? 0.3 : 1,
-                    child: Container(
-                      width: 26, height: 26,
-                      decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.inkSoft),
-                    ),
-                  ),
-                ),
-              ]),
-            );
-          }),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: state.resetNavOrder,
-              child: Text('初期設定に戻す', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.inkSoft)),
-            ),
           ),
         ],
       ),
@@ -521,89 +444,6 @@ class _NotificationBody extends StatelessWidget {
             const SizedBox(height: 14),
             Text('※ 通知を許可すると、タスクごとに設定した時間だけ前に知らせが届きます。',
                 style: AppTheme.body(11.5, color: AppColors.inkFaint)),
-          ] else ...[
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  try {
-                    await NotificationService.showImmediateTestNotification();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('今すぐ通知を出しました。通知トレイを確認してください。'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppColors.ink,
-                    ));
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('即時通知に失敗しました'),
-                        content: SingleChildScrollView(child: Text(e.toString())),
-                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.flash_on_outlined, size: 16, color: AppColors.sage),
-                label: Text('今すぐテスト通知を出す（予約なし）', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.sage)),
-                style: OutlinedButton.styleFrom(backgroundColor: AppColors.sageSoft, side: BorderSide.none, padding: const EdgeInsets.symmetric(vertical: 13)),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  try {
-                    await NotificationService.sendTestNotification(afterSeconds: 10);
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('10秒後にテスト通知を送ります。アプリを閉じて待ってみてください。'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppColors.ink,
-                    ));
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('テスト通知の予約に失敗しました'),
-                        content: SingleChildScrollView(child: Text(e.toString())),
-                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.notifications_active_outlined, size: 16, color: AppColors.indigo),
-                label: Text('10秒後にテスト通知を送る', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.indigo)),
-                style: OutlinedButton.styleFrom(backgroundColor: AppColors.indigoSoft, side: BorderSide.none, padding: const EdgeInsets.symmetric(vertical: 13)),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text('※ 通知の仕組みそのものが動くかどうかだけを、タスクを作らずに確認できます。',
-                style: AppTheme.body(11, color: AppColors.inkFaint)),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () async {
-                  final result = await NotificationService.diagnose();
-                  if (!context.mounted) return;
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('通知の診断情報'),
-                      content: SingleChildScrollView(child: SelectableText(result)),
-                      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
-                    ),
-                  );
-                },
-                child: Text('診断情報を見る', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkFaint)),
-              ),
-            ),
           ],
         ],
       ),

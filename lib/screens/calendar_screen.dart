@@ -92,7 +92,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 // インディゴ色のドットが同化して見えなくなってしまう。
                 // 選択中だけ、ドットに白い輪をつけてコントラストを確保する。
                 final dots = dayTasks.map((t) {
-                  final color = t.isOverdue ? AppColors.coral : (t.isReview ? AppColors.sage : AppColors.indigo);
+                  final color = state.projectById(t.projectId)?.color ?? AppColors.inkFaint;
                   return Container(
                     width: 4.2,
                     height: 4.2,

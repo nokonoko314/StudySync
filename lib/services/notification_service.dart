@@ -56,36 +56,6 @@ class NotificationService {
     _initialized = true;
   }
 
-  /// 診断用：今のチャンネル作成・プラグイン状態を文字列で返す。
-  /// 設定 → 通知 のテストボタンから呼び、結果をそのまま画面に表示する。
-  static Future<String> diagnose() async {
-    final buffer = StringBuffer();
-    try {
-      tzdata.initializeTimeZones();
-      tz.setLocalLocation(tz.getLocation('Asia/Tokyo'));
-      buffer.writeln('timezone OK: ${tz.local.name}');
-    } catch (e) {
-      buffer.writeln('timezone NG: $e');
-    }
-    try {
-      final androidPlugin =
-          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      buffer.writeln('androidPlugin: ${androidPlugin == null ? "null（取得できていない）" : "OK"}');
-      if (androidPlugin != null) {
-        final channels = await androidPlugin.getNotificationChannels();
-        buffer.writeln('既存チャンネル数: ${channels?.length ?? 0}');
-        for (final c in channels ?? []) {
-          buffer.writeln('  - ${c.id} / ${c.name} / importance=${c.importance}');
-        }
-        final granted = await androidPlugin.areNotificationsEnabled();
-        buffer.writeln('areNotificationsEnabled: $granted');
-      }
-    } catch (e) {
-      buffer.writeln('androidPlugin check NG: $e');
-    }
-    return buffer.toString();
-  }
-
   /// タスクのidから、通知用の安定したint IDを作る（正の値に丸める）。
   static int _notificationIdFor(String taskId) => taskId.hashCode & 0x7FFFFFFF;
 
@@ -154,54 +124,5 @@ class NotificationService {
   static Future<void> cancelAll() async {
     await init();
     await _plugin.cancelAll();
-  }
-
-  /// 動作確認用のテスト通知。指定した秒数後に1件だけ通知を送る。
-  /// タスクの期限を待たずに、通知の仕組みそのものが動くかすぐ確認できる。
-  static Future<void> sendTestNotification({int afterSeconds = 10}) async {
-    await init();
-    const testId = 999999;
-    await _plugin.cancel(id: testId);
-    final scheduled = tz.TZDateTime.now(tz.local).add(Duration(seconds: afterSeconds));
-    await _plugin.zonedSchedule(
-      id: testId,
-      title: 'StudySync テスト通知',
-      body: 'この通知が届けば、通知の仕組みは正常に動いています。',
-      scheduledDate: scheduled,
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'studysync_task',
-          'タスクの通知',
-          channelDescription: 'タスクの期限・復習が近づいたときに届く通知です',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-    );
-  }
-
-  /// 予約（AlarmManager）を一切使わず、今すぐその場で通知を出す。
-  /// 「予約の仕組み」と「通知を表示する仕組み」、どちらが悪いのかを
-  /// 切り分けるための、最もシンプルなテスト。
-  static Future<void> showImmediateTestNotification() async {
-    await init();
-    const testId = 999998;
-    await _plugin.show(
-      id: testId,
-      title: 'StudySync 即時テスト',
-      body: 'これが見えれば、通知を表示する仕組み自体は正常です。',
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'studysync_task',
-          'タスクの通知',
-          channelDescription: 'タスクの期限・復習が近づいたときに届く通知です',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-    );
   }
 }

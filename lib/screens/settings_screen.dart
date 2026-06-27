@@ -25,7 +25,6 @@ class SettingsScreen extends StatelessWidget {
         _group([
           _row(context, Icons.wallpaper_outlined, AppColors.indigoSoft, AppColors.indigo, '壁紙', '写真またはカラーを設定', () => showWallpaperSheet(context)),
           _row(context, Icons.format_size, AppColors.sageSoft, AppColors.sage, '文字の大きさ', _fontLabel(state.settings.fontScale), () => showFontSizeSheet(context)),
-          _row(context, Icons.tune, AppColors.goldSoft, AppColors.gold, 'UIの配置', 'ナビゲーションの並び順を変更', () => showLayoutSheet(context)),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('タスク'),
