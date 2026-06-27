@@ -1,8 +1,9 @@
-/build/
-/android/
-/ios/
-/build/
-/windows/
-/macos/
-/linux/
-/.dart_tool/
+android/
+ios/
+windows/
+macos/
+linux/
+.dart_tool/
+build/
+.flutter-plugins-dependencies
+*.iml
