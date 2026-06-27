@@ -438,6 +438,25 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 「プロジェクト」名（旧グループ）を変更し、それを使っている全タスクにも反映する。
+  void renameKnownGroup(String oldName, String newName) {
+    final trimmed = newName.trim();
+    if (trimmed.isEmpty || trimmed == oldName) return;
+    final idx = settings.knownGroups.indexOf(oldName);
+    if (idx == -1) return;
+    if (settings.knownGroups.contains(trimmed)) {
+      // 既に同名のものがある場合は、統合する（重複させない）
+      settings.knownGroups.removeAt(idx);
+    } else {
+      settings.knownGroups[idx] = trimmed;
+    }
+    for (final t in tasks) {
+      if (t.group == oldName) t.group = trimmed;
+    }
+    _persist();
+    notifyListeners();
+  }
+
   /// 新規タスク作成時の既定の期限日時（今日の、設定された既定時刻）。
   DateTime defaultDueDate() {
     final now = DateTime.now();

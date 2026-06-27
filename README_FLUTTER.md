@@ -1,5 +1,43 @@
 # StudySync — Flutter版（lib/ 一式）
 
+## 🆕 v0.4 での変更点
+
+- ✅ 通知が「予約」だけ届かない不具合を修正（下記「⚠️ 重要：AndroidManifest.xml」参照）
+- ✅ 設定 →「プロジェクト」から、タスク作成時の候補（旧グループ）を管理できるように
+- ✅ カレンダー：選択中の日と通常タスクのドットの色が重なって見えない問題を修正
+- ✅ カレンダー：1日のタスク表示が3件までだったのを廃止し、実際の件数と一致するように
+
+### ⚠️ 重要：AndroidManifest.xml に手動で追記が必要な内容（v0.4で特定）
+
+`flutter_local_notifications`は、通知の「予約」を実際に受け取るための受信役
+（receiver）を、`AndroidManifest.xml`に**手動で**追記する必要があります。
+これが無いと、通知の許可やチャンネルが正しく見えていても、「予約」した
+通知だけが一切届きません（即時に出す通知は届くため、原因の特定にかなり
+時間がかかりました）。
+
+`android/app/src/main/AndroidManifest.xml` の `<application>` タグの中、
+`</activity>` の直後に、次を追記してください（このzipを展開しなおした時や
+`flutter create`で作り直した場合は、毎回これが必要です）。
+
+```xml
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+```
+
+`<manifest>`タグの直下にも、もう1つ権限が必要です（端末再起動後も予約を
+引き継ぐための権限）。
+
+```xml
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+```
+
 ## 🆕 v0.3 での変更点
 
 - ✅ 計測中のタイマー画面：×ボタンが反応しない不具合を修正し、下にスワイプして

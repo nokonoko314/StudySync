@@ -6,9 +6,15 @@ class ChangelogEntry {
   const ChangelogEntry(this.version, this.changes);
 }
 
-const String kAppVersion = 'v0.3';
+const String kAppVersion = 'v0.4';
 
 const List<ChangelogEntry> kChangelog = [
+  ChangelogEntry('v0.4', [
+    '通知が予約だけ届かない不具合を修正（AndroidManifest.xmlに、通知の予約を受け取るためのreceiverが登録されていなかったのが原因でした）',
+    '設定 →「プロジェクト」から、タスク作成時に出てくる候補（旧グループ）を追加・名前変更・削除できるように',
+    'カレンダー：選択中の日（青色の背景）と通常タスクのドット（同じ青系の色）が重なって見えにくい問題を修正',
+    'カレンダー：1日に表示されるタスクの点が最大3つに制限されていたのを廃止し、実際のタスク数と一致するように修正',
+  ]),
   ChangelogEntry('v0.3', [
     '計測中のタイマー画面：×ボタンが反応しない不具合を修正し、下にスワイプしても閉じられるように変更',
     '通知が届かない不具合を修正（端末の設定から直接許可した場合も、許可状態を正しく認識するように）',

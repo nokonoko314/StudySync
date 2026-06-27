@@ -83,14 +83,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 4,
+              childAspectRatio: 0.8,
               children: cells.map((c) {
                 final dayTasks = state.tasks.where((t) => sameDay(t.due, c.date)).toList();
-                final dots = dayTasks.take(3).map((t) {
-                  final color = t.isOverdue ? AppColors.coral : (t.isReview ? AppColors.sage : AppColors.indigo);
-                  return Container(width: 4.5, height: 4.5, margin: const EdgeInsets.symmetric(horizontal: 1), decoration: BoxDecoration(color: color, shape: BoxShape.circle));
-                }).toList();
                 final isToday = sameDay(c.date, DateTime.now());
                 final isSelected = sameDay(c.date, _selected);
+                // 選択中の日はセルの背景がインディゴになるため、通常タスクの
+                // インディゴ色のドットが同化して見えなくなってしまう。
+                // 選択中だけ、ドットに白い輪をつけてコントラストを確保する。
+                final dots = dayTasks.map((t) {
+                  final color = t.isOverdue ? AppColors.coral : (t.isReview ? AppColors.sage : AppColors.indigo);
+                  return Container(
+                    width: 4.2,
+                    height: 4.2,
+                    margin: const EdgeInsets.all(0.8),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected ? Border.all(color: Colors.white, width: 0.9) : null,
+                    ),
+                  );
+                }).toList();
                 return Pressable(
                   onTap: () => setState(() => _selected = startOfDay(c.date)),
                   child: Container(
@@ -98,7 +111,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       color: isSelected ? AppColors.indigo : (isToday ? AppColors.indigoSoft : Colors.transparent),
                       borderRadius: BorderRadius.circular(13),
                     ),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
                       Text(
                         '${c.day}',
                         style: AppTheme.body(
@@ -109,8 +123,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               : (c.muted ? AppColors.inkFaint.withOpacity(.5) : (isToday ? AppColors.indigo : AppColors.ink)),
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Row(mainAxisSize: MainAxisSize.min, children: dots),
+                      if (dots.isNotEmpty) const SizedBox(height: 3),
+                      if (dots.isNotEmpty)
+                        Wrap(alignment: WrapAlignment.center, runSpacing: 1.5, children: dots),
                     ]),
                   ),
                 );

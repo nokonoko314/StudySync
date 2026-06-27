@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import '../changelog.dart';
 import '../sheets/settings_sheets.dart';
 import '../sheets/project_list_sheet.dart';
+import '../sheets/group_management_sheet.dart';
 import '../sheets/changelog_sheet.dart';
 import '../widgets/pressable.dart';
 
@@ -43,6 +44,12 @@ class SettingsScreen extends StatelessWidget {
         _sectionLabel('教科'),
         _group([
           _row(context, Icons.folder_outlined, AppColors.sageSoft, AppColors.sage, '教科の管理', '追加・編集・削除', () => showSubjectsSheet(context)),
+        ]),
+        const SizedBox(height: 8),
+        _sectionLabel('プロジェクト'),
+        _group([
+          _row(context, Icons.label_outline, AppColors.coralSoft, AppColors.coral, 'プロジェクトの管理', 'タスク作成時に出てくる候補の追加・変更・削除',
+              () => showProjectsManagementSheet(context)),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('忘却曲線'),
