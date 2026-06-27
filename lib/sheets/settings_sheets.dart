@@ -13,6 +13,7 @@ import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
 import '../widgets/interval_chip_editor.dart';
 import '../widgets/forgetting_curve_chart.dart';
+import '../widgets/color_picker_dialog.dart';
 import '../services/wallpaper_file_service.dart';
 
 // =====================================================================
@@ -65,22 +66,65 @@ class _WallpaperBodyState extends State<_WallpaperBody> {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: AppColors.wallpaperPalette.map((c) {
-              final active = s.wallpaperType == WallpaperType.color && s.wallpaperColor == c.value;
-              return Pressable(
-                onTap: () => state.updateSettings((s) {
-                  s.wallpaperType = WallpaperType.color;
-                  s.wallpaperColor = c.value;
-                }),
+            children: [
+              ...AppColors.wallpaperPalette.map((c) {
+                final active = s.wallpaperType == WallpaperType.color && s.wallpaperColor == c.value;
+                return Pressable(
+                  onTap: () => state.updateSettings((s) {
+                    s.wallpaperType = WallpaperType.color;
+                    s.wallpaperColor = c.value;
+                  }),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: c, border: Border.all(width: 3, color: active ? AppColors.ink : AppColors.line)),
+                  ),
+                );
+              }),
+              ...s.customWallpaperColors.map((value) {
+                final c = Color(value);
+                final active = s.wallpaperType == WallpaperType.color && s.wallpaperColor == value;
+                return Pressable(
+                  onTap: () => state.updateSettings((s) {
+                    s.wallpaperType = WallpaperType.color;
+                    s.wallpaperColor = value;
+                  }),
+                  onLongPress: () => state.updateSettings((s) => s.customWallpaperColors.remove(value)),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: c, border: Border.all(width: 3, color: active ? AppColors.ink : AppColors.line)),
+                  ),
+                );
+              }),
+              Pressable(
+                onTap: () async {
+                  final picked = await showColorPickerDialog(context, AppColors.indigo);
+                  if (picked == null) return;
+                  state.updateSettings((s) {
+                    if (!s.customWallpaperColors.contains(picked.value)) {
+                      s.customWallpaperColors.add(picked.value);
+                    }
+                    s.wallpaperType = WallpaperType.color;
+                    s.wallpaperColor = picked.value;
+                  });
+                },
                 child: Container(
                   width: 34,
                   height: 34,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: c, border: Border.all(width: 3, color: active ? AppColors.ink : AppColors.line)),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.surface2, border: Border.all(color: AppColors.line, width: 1.5)),
+                  child: const Icon(Icons.add, size: 16, color: AppColors.inkSoft),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
+          if (s.customWallpaperColors.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text('追加した色は長押しで削除できます', style: AppTheme.body(10.5, color: AppColors.inkFaint)),
+            ),
           const SizedBox(height: 18),
           Text('写真から選ぶ', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft)),
           const SizedBox(height: 8),
@@ -292,6 +336,19 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
   }
 
   Future<void> _disconnect() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('連携を解除しますか？'),
+        content: const Text(
+            '解除すると、表示中のタスク・教科は初期状態に戻ります（このアカウントのデータはクラウドに保存されているので消えません。別のアカウントで連携すると、そのアカウントのデータに切り替わります）。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('キャンセル')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('解除する', style: TextStyle(color: AppColors.coral))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
     await context.read<AppState>().disconnectGoogle();
     try {
       await GoogleSignIn().signOut();

@@ -19,6 +19,7 @@ class AppSettings {
   WallpaperType wallpaperType;
   int? wallpaperColor; // Color.value
   String? wallpaperImagePath; // ローカルに保存した画像のパス
+  List<int> customWallpaperColors; // ユーザーが追加したカスタム壁紙カラー（Color.value）
 
   AppSettings({
     this.fontScale = 1.0,
@@ -38,9 +39,11 @@ class AppSettings {
     this.wallpaperType = WallpaperType.defaultBg,
     this.wallpaperColor,
     this.wallpaperImagePath,
+    List<int>? customWallpaperColors,
   })  : navOrder = navOrder ?? ['home', 'calendar', 'stats', 'settings'],
         globalIntervals = globalIntervals ?? [1, 3, 7, 14, 30],
-        knownGroups = knownGroups ?? [];
+        knownGroups = knownGroups ?? [],
+        customWallpaperColors = customWallpaperColors ?? [];
 
   Map<String, dynamic> toJson() => {
         'fontScale': fontScale,
@@ -60,6 +63,7 @@ class AppSettings {
         'wallpaperType': wallpaperType.index,
         'wallpaperColor': wallpaperColor,
         'wallpaperImagePath': wallpaperImagePath,
+        'customWallpaperColors': customWallpaperColors,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -84,5 +88,6 @@ class AppSettings {
             WallpaperType.values[json['wallpaperType'] as int? ?? 0],
         wallpaperColor: json['wallpaperColor'] as int?,
         wallpaperImagePath: json['wallpaperImagePath'] as String?,
+        customWallpaperColors: (json['customWallpaperColors'] as List?)?.map((e) => e as int).toList(),
       );
 }

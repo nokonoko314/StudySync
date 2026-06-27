@@ -6,9 +6,14 @@ class ChangelogEntry {
   const ChangelogEntry(this.version, this.changes);
 }
 
-const String kAppVersion = 'v0.4';
+const String kAppVersion = 'v0.5';
 
 const List<ChangelogEntry> kChangelog = [
+  ChangelogEntry('v0.5', [
+    'Googleアカウントを切り替えても前のアカウントのタスクが残って見える不具合を修正（連携を解除すると、表示が初期状態に戻るように変更）',
+    '教科のカラーを、RGBスライダー＋HEXコードで選べるカスタムカラーピッカーに変更（画像のスライダー型ピッカーのイメージに合わせました）',
+    '壁紙のカラーにも、同じカスタムカラーピッカーで好きな色を追加できるように（追加した色は長押しで削除可能）',
+  ]),
   ChangelogEntry('v0.4', [
     '通知が予約だけ届かない不具合を修正（AndroidManifest.xmlに、通知の予約を受け取るためのreceiverが登録されていなかったのが原因でした）',
     '設定 →「プロジェクト」から、タスク作成時に出てくる候補（旧グループ）を追加・名前変更・削除できるように',

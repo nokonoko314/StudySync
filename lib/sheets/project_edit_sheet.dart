@@ -4,6 +4,7 @@ import '../state/app_state.dart';
 import '../app_theme.dart';
 import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
+import '../widgets/color_picker_dialog.dart';
 
 void showProjectEditSheet(BuildContext context, String? projectId) {
   showAppSheet(
@@ -122,7 +123,7 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
                 ),
               Pressable(
                 onTap: () async {
-                  final picked = await _showCustomColorPicker(context, _color);
+                  final picked = await showColorPickerDialog(context, _color);
                   if (picked != null) setState(() => _color = picked);
                 },
                 child: Container(
@@ -164,84 +165,3 @@ class _ProjectEditBodyState extends State<_ProjectEditBody> {
   }
 }
 
-/// シンプルなカスタムカラーピッカー（HSVスライダー＋HEX入力）。
-/// 外部パッケージを使わず、Flutter標準のHSVColorだけで作っている。
-Future<Color?> _showCustomColorPicker(BuildContext context, Color initial) {
-  HSVColor hsv = HSVColor.fromColor(initial);
-  final hexCtrl = TextEditingController(
-      text: '#${initial.value.toRadixString(16).substring(2).toUpperCase()}');
-
-  return showDialog<Color>(
-    context: context,
-    builder: (ctx) {
-      return StatefulBuilder(
-        builder: (ctx, setStateDialog) {
-          final color = hsv.toColor();
-
-          void applyHsv(HSVColor newHsv) {
-            setStateDialog(() {
-              hsv = newHsv;
-              hexCtrl.text = '#${newHsv.toColor().value.toRadixString(16).substring(2).toUpperCase()}';
-            });
-          }
-
-          Widget sliderRow(String label, double value, Color trackColor, ValueChanged<double> onChanged) {
-            return Row(children: [
-              SizedBox(width: 52, child: Text(label, style: AppTheme.body(11.5, color: AppColors.inkSoft))),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(ctx).copyWith(
-                    activeTrackColor: trackColor,
-                    thumbColor: trackColor,
-                    overlayColor: trackColor.withOpacity(.2),
-                    inactiveTrackColor: AppColors.line,
-                  ),
-                  child: Slider(value: value.clamp(0.0, 1.0), onChanged: onChanged),
-                ),
-              ),
-            ]);
-          }
-
-          return AlertDialog(
-            title: const Text('カスタムカラー'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
-                  ),
-                  const SizedBox(height: 14),
-                  sliderRow('色あい', hsv.hue / 360, HSVColor.fromAHSV(1, hsv.hue, 1, 1).toColor(),
-                      (v) => applyHsv(hsv.withHue(v * 360))),
-                  sliderRow('鮮やかさ', hsv.saturation, color, (v) => applyHsv(hsv.withSaturation(v))),
-                  sliderRow('明るさ', hsv.value, color, (v) => applyHsv(hsv.withValue(v))),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: hexCtrl,
-                    decoration: const InputDecoration(labelText: 'HEXコードで指定（任意）', hintText: '#423E99'),
-                    onSubmitted: (text) {
-                      final cleaned = text.trim().replaceFirst('#', '');
-                      if (cleaned.length == 6) {
-                        final value = int.tryParse(cleaned, radix: 16);
-                        if (value != null) {
-                          applyHsv(HSVColor.fromColor(Color(0xFF000000 | value)));
-                        }
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')),
-              TextButton(onPressed: () => Navigator.pop(ctx, color), child: const Text('この色にする')),
-            ],
-          );
-        },
-      );
-    },
-  );
-}

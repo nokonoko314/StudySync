@@ -170,9 +170,39 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 連携を解除する。
+  ///
+  /// これまでは解除してもローカルの表示がそのまま残ってしまい、別の
+  /// Googleアカウントで再連携した際に「前のアカウントのタスクが
+  /// 残って見える」不具合があった（クラウド側に新規アカウントの
+  /// データが無い場合、ローカルのデータをそのまま新アカウントに
+  /// 紐づけてしまっていたため）。
+  ///
+  /// このアカウントの最新データは、直前までの操作で都度クラウドへ
+  /// 送信済みなので消えない。解除時はローカルの表示だけを
+  /// 「初期状態（デモデータ）」に戻すことで、次に別アカウントで
+  /// 連携したときに正しくそのアカウントのデータだけが反映されるようにする。
   Future<void> disconnectGoogle() async {
-    settings.googleConnected = false;
-    settings.googleEmail = '';
+    final keepWallpaperType = settings.wallpaperType;
+    final keepWallpaperColor = settings.wallpaperColor;
+    final keepWallpaperImagePath = settings.wallpaperImagePath;
+    final keepCustomWallpaperColors = settings.customWallpaperColors;
+    final keepFontScale = settings.fontScale;
+    final keepNavOrder = settings.navOrder;
+    final keepNotifGranted = settings.notifGranted;
+
+    projects = [];
+    tasks = [];
+    settings = AppSettings()
+      ..wallpaperType = keepWallpaperType
+      ..wallpaperColor = keepWallpaperColor
+      ..wallpaperImagePath = keepWallpaperImagePath
+      ..customWallpaperColors = keepCustomWallpaperColors
+      ..fontScale = keepFontScale
+      ..navOrder = keepNavOrder
+      ..notifGranted = keepNotifGranted;
+    seedDemoData(this);
+
     await _persist();
     notifyListeners();
   }
