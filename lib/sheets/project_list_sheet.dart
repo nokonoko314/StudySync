@@ -19,7 +19,8 @@ class _SubjectsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -47,6 +48,7 @@ class _SubjectsBody extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -77,9 +79,11 @@ class _SubjectsBody extends StatelessWidget {
           ),
           Pressable(
             onTap: () => showProjectEditSheet(context, p.id),
-            child: const Padding(
-              padding: EdgeInsets.only(left: 8),
-              child: Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
+            child: Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              child: const Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
             ),
           ),
         ]),

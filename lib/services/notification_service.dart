@@ -3,6 +3,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import '../models/task.dart';
 import '../models/app_settings.dart';
+import '../utils/date_utils.dart';
 
 /// 端末への実際の通知（ローカル通知）を管理するサービス。
 ///
@@ -86,8 +87,12 @@ class NotificationService {
     }
 
     final scheduled = tz.TZDateTime.from(notifyAt, tz.local);
-    final title = task.isReview ? '復習リマインダー' : '期限が近づいています';
-    final body = task.isReview ? '「${task.title}」の復習予定です。' : '「${task.title}」の期限が近づいています。';
+    final due = task.due;
+    final dueLabel = '${due.month}/${due.day} ${pad2(due.hour)}:${pad2(due.minute)}';
+    final title = task.isReview ? '復習の時間です' : 'もうすぐ期限です';
+    final body = task.isReview
+        ? '「${task.title}」を $dueLabel までに復習しましょう。'
+        : '「${task.title}」の期限は $dueLabel です。';
 
     await _plugin.zonedSchedule(
       id: id,

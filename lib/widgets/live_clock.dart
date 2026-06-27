@@ -20,8 +20,21 @@ class _LiveClockState extends State<LiveClock> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 20), (_) {
-      if (mounted) setState(() {});
+    _scheduleNextTick();
+  }
+
+  /// 「次の分が始まる、ちょうどその瞬間」に更新されるようにする。
+  /// 固定間隔（例：20秒ごと）だと、表示が実際の分の切り替わりより
+  /// 最大で「その間隔の長さ」だけ遅れて見えてしまうため。
+  void _scheduleNextTick() {
+    final now = DateTime.now();
+    final msUntilNextMinute = 60000 - (now.second * 1000 + now.millisecond);
+    _timer = Timer(Duration(milliseconds: msUntilNextMinute), () {
+      if (!mounted) return;
+      setState(() {});
+      _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+        if (mounted) setState(() {});
+      });
     });
   }
 

@@ -12,7 +12,8 @@ class _ChangelogBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,6 +46,7 @@ class _ChangelogBody extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
       ),
     );
   }

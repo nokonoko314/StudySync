@@ -68,7 +68,8 @@ class _ProjectsManagementBodyState extends State<_ProjectsManagementBody> {
     final state = context.watch<AppState>();
     final groups = state.settings.knownGroups;
 
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -104,11 +105,11 @@ class _ProjectsManagementBodyState extends State<_ProjectsManagementBody> {
                     ),
                     Pressable(
                       onTap: () => _rename(context, state, g),
-                      child: const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint)),
+                      child: Container(width: 32, height: 32, alignment: Alignment.center, child: const Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint)),
                     ),
                     Pressable(
                       onTap: () => _delete(context, state, g, count),
-                      child: const Padding(padding: EdgeInsets.only(left: 10), child: Icon(Icons.close, size: 15, color: AppColors.inkFaint)),
+                      child: Container(width: 32, height: 32, alignment: Alignment.center, child: const Icon(Icons.close, size: 15, color: AppColors.inkFaint)),
                     ),
                   ]),
                 ),
@@ -145,6 +146,7 @@ class _ProjectsManagementBodyState extends State<_ProjectsManagementBody> {
             ),
           ]),
         ],
+      ),
       ),
     );
   }

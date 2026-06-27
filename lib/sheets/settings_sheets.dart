@@ -53,7 +53,8 @@ class _WallpaperBodyState extends State<_WallpaperBody> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final s = state.settings;
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,6 +113,7 @@ class _WallpaperBodyState extends State<_WallpaperBody> {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -132,7 +134,8 @@ class _FontSizeBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -175,6 +178,7 @@ class _FontSizeBody extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -193,7 +197,8 @@ class _CurveSettingsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -227,6 +232,7 @@ class _CurveSettingsBody extends StatelessWidget {
             child: ForgettingCurveChart(intervals: state.settings.globalIntervals),
           ),
         ],
+      ),
       ),
     );
   }
@@ -347,7 +353,8 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
         ],
       ]);
     }
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 26),
       child: Container(
         width: double.infinity,
@@ -355,6 +362,7 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
         alignment: Alignment.center,
         decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(16)),
         child: content,
+      ),
       ),
     );
   }
@@ -398,7 +406,8 @@ class _NotificationBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -446,6 +455,7 @@ class _NotificationBody extends StatelessWidget {
                 style: AppTheme.body(11.5, color: AppColors.inkFaint)),
           ],
         ],
+      ),
       ),
     );
   }

@@ -178,9 +178,11 @@ class ProjectDrawer extends StatelessWidget {
           ),
           Pressable(
             onTap: () => showProjectEditSheet(context, p.id),
-            child: const Padding(
-              padding: EdgeInsets.only(left: 8),
-              child: Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
+            child: Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              child: const Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
             ),
           ),
         ]),
