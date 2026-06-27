@@ -1,0 +1,1 @@
+ C:\\Users\\lastn\\hobby\\StudySync\\StudySync_v0.1\\StudySync_project\\.dart_tool\\flutter_build\\aeecd734e5a01d52134a572289df54b7\\native_assets.json: 
