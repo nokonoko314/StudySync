@@ -314,9 +314,6 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
       _sub = googleSignIn.onCurrentUserChanged.listen((account) {
         if (account != null) _finishSignIn(account);
       });
-      // ページ再読み込み直後など、既にセッションが残っている場合に
-      // 自動でサインイン状態を復元する。
-      googleSignIn.signInSilently();
     }
   }
 
