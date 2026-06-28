@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../services/google_signin_config.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import '../state/app_state.dart';
@@ -306,7 +307,7 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
       _error = null;
     });
     try {
-      final googleUser = await GoogleSignIn().signIn();
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         // ユーザーがサインインをキャンセルした
         setState(() => _connecting = false);
@@ -351,7 +352,7 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
     if (confirm != true) return;
     await context.read<AppState>().disconnectGoogle();
     try {
-      await GoogleSignIn().signOut();
+      await googleSignIn.signOut();
       await FirebaseAuth.instance.signOut();
     } catch (_) {
       // サインアウト自体に失敗しても、アプリ内の連携状態は解除済みのままで問題ない
