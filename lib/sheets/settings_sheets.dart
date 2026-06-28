@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/google_signin_config.dart';
+import '../services/google_signin_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import '../state/app_state.dart';
@@ -300,19 +302,39 @@ class _GoogleLinkBody extends StatefulWidget {
 class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
   bool _connecting = false;
   String? _error;
+  StreamSubscription<GoogleSignInAccount?>? _sub;
 
-  Future<void> _connect() async {
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      // Web版は公式の描画ボタンを使うので、サインイン結果はボタンの
+      // クリックではなく、このストリーム経由で届く。
+      _sub = googleSignIn.onCurrentUserChanged.listen((account) {
+        if (account != null) _finishSignIn(account);
+      });
+      // ページ再読み込み直後など、既にセッションが残っている場合に
+      // 自動でサインイン状態を復元する。
+      googleSignIn.signInSilently();
+    }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  /// Googleアカウントの取得が完了した後（ポップアップ方式・公式ボタン方式の
+  /// どちらでも）共通で行う処理：Firebaseへの認証情報の引き渡しと、
+  /// アプリ側のデータ連携。
+  Future<void> _finishSignIn(GoogleSignInAccount googleUser) async {
+    if (_connecting) return; // 二重実行防止
     setState(() {
       _connecting = true;
       _error = null;
     });
     try {
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        // ユーザーがサインインをキャンセルした
-        setState(() => _connecting = false);
-        return;
-      }
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -332,8 +354,30 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
     } catch (e, st) {
       debugPrint('[GoogleConnect] error: $e');
       debugPrint('[GoogleConnect] stack:\n$st');
-      setState(() => _error = '連携に失敗しました。Firebaseの設定を確認してください。\n($e)');
+      if (mounted) setState(() => _error = '連携に失敗しました。Firebaseの設定を確認してください。\n($e)');
     } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
+  }
+
+  /// Android/iOS用：自前のボタンから呼ぶ、ポップアップ方式のサインイン。
+  Future<void> _connect() async {
+    setState(() {
+      _connecting = true;
+      _error = null;
+    });
+    try {
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        // ユーザーがサインインをキャンセルした
+        setState(() => _connecting = false);
+        return;
+      }
+      await _finishSignIn(googleUser);
+    } catch (e, st) {
+      debugPrint('[GoogleConnect] error: $e');
+      debugPrint('[GoogleConnect] stack:\n$st');
+      if (mounted) setState(() => _error = '連携に失敗しました。Firebaseの設定を確認してください。\n($e)');
       if (mounted) setState(() => _connecting = false);
     }
   }
@@ -399,14 +443,18 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
           style: AppTheme.body(13, color: AppColors.inkSoft),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _connect,
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.indigo, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            child: Text('Googleでサインインして連携', style: AppTheme.body(14, weight: FontWeight.w700)),
+        if (kIsWeb)
+          // Web版：Google公式の描画ボタン（ポップアップ方式より安定している）
+          Center(child: buildGoogleSignInButton())
+        else
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _connect,
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.indigo, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: Text('Googleでサインインして連携', style: AppTheme.body(14, weight: FontWeight.w700)),
+            ),
           ),
-        ),
         if (_error != null) ...[
           const SizedBox(height: 12),
           Text(_error!, textAlign: TextAlign.center, style: AppTheme.body(11.5, color: AppColors.coral)),
