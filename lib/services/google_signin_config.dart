@@ -12,7 +12,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 ///    「ウェブ アプリケーション」になっているものを開く
 /// 5. 「クライアント ID」（〜.apps.googleusercontent.com の文字列）を
 ///    コピーして、下の '' の中に貼る
-const String kGoogleWebClientId = '513488495547-1samdo06q1vcte6ge22rdkn3ifgdv5pv.apps.googleusercontent.com'; // ← ここにWeb用クライアントIDを貼る
+const String kGoogleWebClientId = '513488495547-1samdo06q1vcte6ge22rdkn3ifgdv5pv.apps.googleusercontent.com';
 
 /// アプリ全体で共通のGoogleSignInインスタンス。
 /// Web版のときだけ kGoogleWebClientId を渡す

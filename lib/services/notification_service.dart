@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -34,25 +35,23 @@ class NotificationService {
       settings: const InitializationSettings(android: androidInit, iOS: iosInit),
     );
 
-    // チャンネルを明示的に作っておく。これをやらないと、最初の通知が
-    // 実際に発火するまでチャンネル自体がシステムの「通知」設定に
-    // 出てこないため、診断がしづらくなる。
-    //
-    // ここで resolvePlatformSpecificImplementation が null を返すと、
-    // 何も作られないまま黙って次に進んでしまう（?.だと気付けない）ので、
-    // 明示的にチェックして、失敗したらその場でわかるようにしている。
-    final androidPlugin =
-        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin == null) {
-      throw Exception('AndroidFlutterLocalNotificationsPlugin が取得できませんでした（resolvePlatformSpecificImplementation が null）。');
+    // チャンネルの明示的な作成は、Android専用の仕組みなので、
+    // Web版など他のプラットフォームでは何もしない（resolvePlatformSpecific
+    // Implementation が必ず null になり、以前はそれを例外として投げていた
+    // ため、Web版で毎回エラーになってしまっていた）。
+    if (!kIsWeb) {
+      final androidPlugin =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        const channel = AndroidNotificationChannel(
+          'studysync_task',
+          'タスクの通知',
+          description: 'タスクの期限・復習が近づいたときに届く通知です',
+          importance: Importance.high,
+        );
+        await androidPlugin.createNotificationChannel(channel);
+      }
     }
-    const channel = AndroidNotificationChannel(
-      'studysync_task',
-      'タスクの通知',
-      description: 'タスクの期限・復習が近づいたときに届く通知です',
-      importance: Importance.high,
-    );
-    await androidPlugin.createNotificationChannel(channel);
 
     _initialized = true;
   }

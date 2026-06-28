@@ -329,7 +329,9 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.ink,
       ));
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[GoogleConnect] error: $e');
+      debugPrint('[GoogleConnect] stack:\n$st');
       setState(() => _error = '連携に失敗しました。Firebaseの設定を確認してください。\n($e)');
     } finally {
       if (mounted) setState(() => _connecting = false);
