@@ -5,7 +5,7 @@ import '../app_theme.dart';
 import '../utils/date_utils.dart';
 import '../widgets/stats_charts.dart';
 
-enum _StatsView { day, week, project, task }
+enum _StatsView { day, week, project, group, task }
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -58,6 +58,20 @@ class _StatsScreenState extends State<StatsScreen> {
     return items;
   }
 
+  List<HBarItem> _byGroup(AppState state) {
+    final groups = state.settings.knownGroups;
+    final items = groups.map((g) {
+      final total = state.tasks.where((t) => t.group == g.name).fold<int>(0, (s, t) => s + t.timeSpent);
+      return HBarItem(g.name, AppColors.coral, (total / 60).round());
+    }).toList();
+    final untaggedTotal = state.tasks.where((t) => t.group == null).fold<int>(0, (s, t) => s + t.timeSpent);
+    if (untaggedTotal > 0) {
+      items.add(HBarItem('未分類', AppColors.inkFaint, (untaggedTotal / 60).round()));
+    }
+    items.sort((a, b) => b.minutes.compareTo(a.minutes));
+    return items;
+  }
+
   List<HBarItem> _byTask(AppState state) {
     final items = state.tasks.where((t) => t.timeSpent > 0).map((t) {
       final p = state.projectById(t.projectId);
@@ -103,6 +117,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 _StatsView.day => '日別',
                 _StatsView.week => '週別',
                 _StatsView.project => '教科別',
+                _StatsView.group => 'プロジェクト別',
                 _StatsView.task => 'タスク別',
               };
               return Expanded(
@@ -163,6 +178,8 @@ class _StatsScreenState extends State<StatsScreen> {
         return BarChartWidget(data: _weekly(state, 6));
       case _StatsView.project:
         return HorizontalBarList(items: _byProject(state));
+      case _StatsView.group:
+        return HorizontalBarList(items: _byGroup(state));
       case _StatsView.task:
         return HorizontalBarList(items: _byTask(state));
     }

@@ -1,153 +1,187 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../models/group_project.dart';
 import '../app_theme.dart';
 import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
+import 'group_edit_sheet.dart';
+import 'project_history_sheet.dart';
 
-/// 設定 → プロジェクト から開く管理シート。
-/// ここでの「プロジェクト」は、タスク作成時の「プロジェクト（任意）」欄
-/// （旧グループ）に入力した名前の一覧（AppSettings.knownGroups）のこと。
-/// 教科（旧プロジェクト、Projectモデル）とは別物です。
+/// 「プロジェクト」（旧グループ）の一覧画面。
+/// タスク作成時の「プロジェクト（任意）」欄の候補と同じデータを使う。
+/// 教科（Projectモデル）とは別物。
+///
+/// - 進行中のプロジェクトはコーラル色でハイライトして並ぶ
+/// - 終了したプロジェクト（終了日が過ぎたもの）は下にまとまり、
+///   タップすると当時のタスク・学習時間を振り返れる
+/// - 各プロジェクトには「タスク件数」「学習時間」の集計が付く
 void showProjectsManagementSheet(BuildContext context) {
-  showAppSheet(context, title: 'プロジェクトの管理', bodyBuilder: (ctx) => const _ProjectsManagementBody());
+  showAppSheet(context, title: 'プロジェクト', bodyBuilder: (ctx) => const _GroupListBody());
 }
 
-class _ProjectsManagementBody extends StatefulWidget {
-  const _ProjectsManagementBody();
-  @override
-  State<_ProjectsManagementBody> createState() => _ProjectsManagementBodyState();
-}
+class _GroupListBody extends StatelessWidget {
+  const _GroupListBody();
 
-class _ProjectsManagementBodyState extends State<_ProjectsManagementBody> {
-  final _addCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _addCtrl.dispose();
-    super.dispose();
+  int _minutesFor(AppState state, String name) {
+    final total = state.tasks.where((t) => t.group == name).fold<int>(0, (s, t) => s + t.timeSpent);
+    return (total / 60).round();
   }
 
-  Future<void> _rename(BuildContext context, AppState state, String name) async {
-    final ctrl = TextEditingController(text: name);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('プロジェクト名を変更'),
-        content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(hintText: '例：期末試験')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル')),
-          TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('変更')),
-        ],
-      ),
-    );
-    if (result != null && result.trim().isNotEmpty) {
-      state.renameKnownGroup(name, result.trim());
-    }
-  }
-
-  Future<void> _delete(BuildContext context, AppState state, String name, int taskCount) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('プロジェクトを削除'),
-        content: Text(taskCount > 0
-            ? 'この候補を削除します。すでに「$name」を設定している$taskCount件のタスクの表示はそのまま残ります（候補一覧からだけ消えます）。'
-            : 'この候補を削除しますか？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('キャンセル')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('削除', style: TextStyle(color: AppColors.coral))),
-        ],
-      ),
-    );
-    if (confirm == true) state.removeKnownGroup(name);
-  }
+  int _countFor(AppState state, String name) => state.tasks.where((t) => t.group == name).length;
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final groups = state.settings.knownGroups;
+    final all = state.settings.knownGroups;
+    final ongoing = all.where((g) => !g.isPast).toList();
+    final ended = all.where((g) => g.isPast).toList();
 
     return SingleChildScrollView(
       child: Padding(
-      padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('タスク作成時の「プロジェクト」欄に出てくる候補を管理します。', style: AppTheme.body(12, color: AppColors.inkSoft)),
-          const SizedBox(height: 14),
-          if (groups.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: Text('まだ候補がありません', style: AppTheme.body(12.5, color: AppColors.inkFaint))),
-            )
-          else
-            ...groups.map((g) {
-              final count = state.tasks.where((t) => t.group == g).length;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Container(
-                  decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  child: Row(children: [
-                    Expanded(
-                      child: Pressable(
-                        onTap: () => _rename(context, state, g),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 11),
-                          child: Row(children: [
-                            Expanded(child: Text(g, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTheme.body(14, weight: FontWeight.w700))),
-                            Text('$count件', style: AppTheme.body(11, weight: FontWeight.w600, color: AppColors.inkFaint)),
-                          ]),
-                        ),
-                      ),
-                    ),
-                    Pressable(
-                      onTap: () => _rename(context, state, g),
-                      child: Container(width: 32, height: 32, alignment: Alignment.center, child: const Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint)),
-                    ),
-                    Pressable(
-                      onTap: () => _delete(context, state, g, count),
-                      child: Container(width: 32, height: 32, alignment: Alignment.center, child: const Icon(Icons.close, size: 15, color: AppColors.inkFaint)),
-                    ),
-                  ]),
-                ),
-              );
-            }),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _addCtrl,
-                decoration: InputDecoration(
-                  hintText: '新しいプロジェクト名',
-                  filled: true,
-                  fillColor: AppColors.surface2,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(11), borderSide: const BorderSide(color: AppColors.line, width: 1.5)),
-                ),
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('教科をまたいだ「テスト期間」や「対策」ごとに、タスクをまとめて管理・振り返りできます。',
+                style: AppTheme.body(12, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => showGroupEditSheet(context, null),
+                icon: const Icon(Icons.add, size: 16, color: AppColors.coral),
+                label: Text('新しいプロジェクト', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.coral)),
+                style: OutlinedButton.styleFrom(
+                    backgroundColor: AppColors.coralSoft, side: BorderSide.none, padding: const EdgeInsets.symmetric(vertical: 13)),
               ),
             ),
-            const SizedBox(width: 8),
-            Pressable(
-              onTap: () {
-                if (_addCtrl.text.trim().isEmpty) return;
-                state.registerGroup(_addCtrl.text);
-                _addCtrl.clear();
-                FocusScope.of(context).unfocus();
-              },
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(color: AppColors.indigo, shape: BoxShape.circle),
-                child: const Icon(Icons.add, color: Colors.white, size: 20),
+            const SizedBox(height: 20),
+            if (all.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text('まだプロジェクトがありません。上のボタンから作ってみましょう。',
+                      textAlign: TextAlign.center, style: AppTheme.body(12.5, color: AppColors.inkFaint)),
+                ),
               ),
-            ),
-          ]),
-        ],
-      ),
+            if (ongoing.isNotEmpty) ...[
+              _sectionLabel('進行中', AppColors.coral),
+              const SizedBox(height: 8),
+              ...ongoing.map((g) => _ongoingCard(context, state, g)),
+              const SizedBox(height: 12),
+            ],
+            if (ended.isNotEmpty) ...[
+              _sectionLabel('終了したプロジェクト', AppColors.inkFaint),
+              const SizedBox(height: 4),
+              Text('タップすると、当時の記録を振り返れます', style: AppTheme.body(11, color: AppColors.inkFaint)),
+              const SizedBox(height: 8),
+              ...ended.map((g) => _endedCard(context, state, g)),
+            ],
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _sectionLabel(String text, Color color) => Row(children: [
+        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 7),
+        Text(text, style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft).copyWith(letterSpacing: .3)),
+      ]);
+
+  Widget _ongoingCard(BuildContext context, AppState state, GroupProject g) {
+    final minutes = _minutesFor(state, g.name);
+    final count = _countFor(state, g.name);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Pressable(
+        onTap: () => showGroupEditSheet(context, g.name),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.coralSoft,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: AppColors.coral.withOpacity(.35), width: 1.2),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(
+                child: Text(g.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTheme.body(15, weight: FontWeight.w700, color: AppColors.ink)),
+              ),
+              const Icon(Icons.chevron_right, size: 18, color: AppColors.coral),
+            ]),
+            if (g.hasPeriod) ...[
+              const SizedBox(height: 3),
+              Text(_periodLabel(g), style: AppTheme.body(11, weight: FontWeight.w700, color: AppColors.coral)),
+            ],
+            const SizedBox(height: 10),
+            Row(children: [
+              _statChip(Icons.checklist_rounded, '$count件'),
+              const SizedBox(width: 8),
+              _statChip(Icons.schedule_rounded, '$minutes分'),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _endedCard(BuildContext context, AppState state, GroupProject g) {
+    final minutes = _minutesFor(state, g.name);
+    final count = _countFor(state, g.name);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Pressable(
+        onTap: () => showProjectHistorySheet(context, g.name),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(15)),
+          child: Row(children: [
+            Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+              child: const Icon(Icons.event_repeat_rounded, size: 14, color: AppColors.inkFaint),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(g.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTheme.body(14, weight: FontWeight.w700, color: AppColors.inkSoft)),
+                if (g.hasPeriod) Text(_periodLabel(g), style: AppTheme.body(10.5, color: AppColors.inkFaint)),
+              ]),
+            ),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text('$count件', style: AppTheme.mono(11, color: AppColors.inkSoft)),
+              Text('$minutes分', style: AppTheme.mono(11, color: AppColors.inkFaint)),
+            ]),
+            const SizedBox(width: 4),
+            Pressable(
+              onTap: () => showGroupEditSheet(context, g.name),
+              child: Container(width: 30, height: 30, alignment: Alignment.center, child: const Icon(Icons.edit_outlined, size: 13, color: AppColors.inkFaint)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _statChip(IconData icon, String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(99)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 12, color: AppColors.coral),
+          const SizedBox(width: 4),
+          Text(text, style: AppTheme.body(11, weight: FontWeight.w700, color: AppColors.ink)),
+        ]),
+      );
+
+  String _periodLabel(GroupProject g) {
+    String fmt(DateTime d) => '${d.year}/${d.month}/${d.day}';
+    if (g.startDate != null && g.endDate != null) return '${fmt(g.startDate!)} 〜 ${fmt(g.endDate!)}';
+    if (g.startDate != null) return '${fmt(g.startDate!)} 〜';
+    return '〜 ${fmt(g.endDate!)}';
   }
 }

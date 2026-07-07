@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../models/project.dart';
 import '../models/task.dart';
 import '../models/app_settings.dart';
+import '../models/group_project.dart';
 import '../services/persistence_service.dart';
 import '../services/sync_service.dart';
 import '../services/notification_service.dart';
@@ -264,6 +265,7 @@ class AppState extends ChangeNotifier {
     );
     tasks.add(t);
     if (group != null) registerGroup(group);
+    settings.lastUsedGroup = group;
     _persist();
     NotificationService.scheduleForTask(t, settings).catchError((_) {});
     notifyListeners();
@@ -289,6 +291,7 @@ class AppState extends ChangeNotifier {
     } else if (group != null) {
       t.group = group;
       registerGroup(group);
+      settings.lastUsedGroup = group;
     }
     if (due != null) t.due = due;
     if (notes != null) t.notes = notes;
@@ -465,18 +468,49 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// ドロワーの「教科」を長押しドラッグで並び替えたときに呼ばれる。
+  void reorderProjects(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex -= 1;
+    if (oldIndex < 0 || oldIndex >= projects.length) return;
+    if (newIndex < 0 || newIndex >= projects.length) return;
+    final item = projects.removeAt(oldIndex);
+    projects.insert(newIndex, item);
+    _persist();
+    notifyListeners();
+  }
+
   /// 「プロジェクト」名（旧グループ）を「使ったことがある候補」として記録する。
   /// 一度使えば、別のタスク・別の科目でも次から候補に出てくるようになる。
   void registerGroup(String group) {
     final trimmed = group.trim();
-    if (trimmed.isEmpty || settings.knownGroups.contains(trimmed)) return;
-    settings.knownGroups.add(trimmed);
+    if (trimmed.isEmpty || settings.knownGroups.any((g) => g.name == trimmed)) return;
+    settings.knownGroups.add(GroupProject(name: trimmed));
+    _persist();
+    notifyListeners();
+  }
+
+  GroupProject? groupProjectByName(String name) {
+    for (final g in settings.knownGroups) {
+      if (g.name == name) return g;
+    }
+    return null;
+  }
+
+  /// プロジェクトの期間（開始日・終了日、どちらも任意）を設定する。
+  /// 終了日を設定しておくと、期間が終わったあとも一覧の「過去のプロジェクト」
+  /// から選んで振り返れるようになる。
+  void setGroupPeriod(String name, {DateTime? startDate, DateTime? endDate}) {
+    final g = groupProjectByName(name);
+    if (g == null) return;
+    g.startDate = startDate;
+    g.endDate = endDate;
     _persist();
     notifyListeners();
   }
 
   void removeKnownGroup(String group) {
-    settings.knownGroups.remove(group);
+    settings.knownGroups.removeWhere((g) => g.name == group);
+    if (settings.lastUsedGroup == group) settings.lastUsedGroup = null;
     _persist();
     notifyListeners();
   }
@@ -485,17 +519,18 @@ class AppState extends ChangeNotifier {
   void renameKnownGroup(String oldName, String newName) {
     final trimmed = newName.trim();
     if (trimmed.isEmpty || trimmed == oldName) return;
-    final idx = settings.knownGroups.indexOf(oldName);
+    final idx = settings.knownGroups.indexWhere((g) => g.name == oldName);
     if (idx == -1) return;
-    if (settings.knownGroups.contains(trimmed)) {
+    if (settings.knownGroups.any((g) => g.name == trimmed)) {
       // 既に同名のものがある場合は、統合する（重複させない）
       settings.knownGroups.removeAt(idx);
     } else {
-      settings.knownGroups[idx] = trimmed;
+      settings.knownGroups[idx].name = trimmed;
     }
     for (final t in tasks) {
       if (t.group == oldName) t.group = trimmed;
     }
+    if (settings.lastUsedGroup == oldName) settings.lastUsedGroup = trimmed;
     _persist();
     notifyListeners();
   }

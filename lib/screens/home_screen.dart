@@ -25,23 +25,24 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       drawer: const ProjectDrawer(),
+      floatingActionButton: Pressable(
+        onTap: () => showAddEditTaskSheet(context, projectIdHint: state.activeProjectId),
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppColors.indigo,
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: AppColors.indigo.withOpacity(0.4), blurRadius: 22, offset: const Offset(0, 10))],
+          ),
+          child: const Icon(Icons.add, color: Colors.white, size: 24),
+        ),
+      ),
       body: Stack(children: [
         Column(children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 18, 4),
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Builder(
-                builder: (ctx) => Pressable(
-                  onTap: () => Scaffold.of(ctx).openDrawer(),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-                    child: const Icon(Icons.menu_rounded, size: 18, color: AppColors.ink),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(title, style: AppTheme.display(21)),
@@ -80,7 +81,22 @@ class HomeScreen extends StatelessWidget {
                     ),
                 ]),
               ),
-              const Padding(padding: EdgeInsets.only(top: 2), child: LiveClock()),
+              const SizedBox(width: 10),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Builder(
+                  builder: (ctx) => Pressable(
+                    onTap: () => Scaffold.of(ctx).openDrawer(),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+                      child: const Icon(Icons.menu_rounded, size: 16, color: AppColors.ink),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const LiveClock(),
+              ]),
             ]),
           ),
           const Padding(
@@ -95,23 +111,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ]),
-        Positioned(
-          right: 20,
-          bottom: 20,
-          child: Pressable(
-            onTap: () => showAddEditTaskSheet(context, projectIdHint: state.activeProjectId),
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.indigo,
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: AppColors.indigo.withOpacity(0.4), blurRadius: 22, offset: const Offset(0, 10))],
-              ),
-              child: const Icon(Icons.add, color: Colors.white, size: 24),
-            ),
-          ),
-        ),
       ]),
     );
   }

@@ -44,7 +44,7 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
       _group = t.group;
       // 過去に設定されていたが、その後候補一覧から削除された値でも
       // ドロップダウンが落ちないよう、無ければ候補に補っておく。
-      if (_group != null && !state.settings.knownGroups.contains(_group)) {
+      if (_group != null && !state.settings.knownGroups.any((g) => g.name == _group)) {
         state.registerGroup(_group!);
       }
       _notesCtrl.text = t.notes;
@@ -54,6 +54,8 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
       _intervals = [...t.intervals];
     } else {
       _projectId = widget.projectIdHint ?? (state.projects.isNotEmpty ? state.projects.first.id : null);
+      final last = state.settings.lastUsedGroup;
+      _group = (last != null && state.settings.knownGroups.any((g) => g.name == last)) ? last : null;
       _autoReview = state.settings.globalAutoReview;
       _intervals = [...state.settings.globalIntervals];
       _due = state.defaultDueDate();
@@ -87,6 +89,8 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
       content: Text(msg),
       behavior: SnackBarBehavior.floating,
       backgroundColor: error ? AppColors.coral : AppColors.ink,
+      // ＋ボタン（FAB）と重ならないよう、下に十分な余白を確保する。
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
     ));
   }
 
@@ -125,14 +129,14 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
         intervals: _intervals,
       );
     }
-    Navigator.pop(context);
     _toast('保存しました');
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final groupOptions = state.settings.knownGroups;
+    final groupOptions = state.settings.knownGroups.map((g) => g.name).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
@@ -141,6 +145,30 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
         children: [
           _label('タスク名'),
           TextField(controller: _titleCtrl, decoration: _decoration('例：数学Ⅱ 三角関数 教科書p.42-50')),
+          const SizedBox(height: 16),
+          _label('プロジェクト（任意）'),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: _boxDecoration(),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String?>(
+                value: _group,
+                isExpanded: true,
+                hint: Text('なし', style: AppTheme.body(14, color: AppColors.inkFaint)),
+                items: [
+                  DropdownMenuItem(value: null, child: Text('なし', style: AppTheme.body(14, color: AppColors.inkFaint))),
+                  ...groupOptions.map((g) => DropdownMenuItem(value: g, child: Text(g, style: AppTheme.body(14)))),
+                ],
+                onChanged: (v) => setState(() => _group = v),
+              ),
+            ),
+          ),
+          if (groupOptions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text('候補がまだありません。ドロワーの「プロジェクトを管理・振り返る」から追加できます。',
+                  style: AppTheme.body(11, color: AppColors.inkFaint)),
+            ),
           const SizedBox(height: 16),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
@@ -163,30 +191,6 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
               ]),
             ),
           ]),
-          const SizedBox(height: 16),
-          _label('プロジェクト（任意）'),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: _boxDecoration(),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String?>(
-                value: _group,
-                isExpanded: true,
-                hint: Text('なし', style: AppTheme.body(14, color: AppColors.inkFaint)),
-                items: [
-                  DropdownMenuItem(value: null, child: Text('なし', style: AppTheme.body(14, color: AppColors.inkFaint))),
-                  ...groupOptions.map((g) => DropdownMenuItem(value: g, child: Text(g, style: AppTheme.body(14)))),
-                ],
-                onChanged: (v) => setState(() => _group = v),
-              ),
-            ),
-          ),
-          if (groupOptions.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text('候補がまだありません。設定 →「プロジェクトの管理」から追加できます。',
-                  style: AppTheme.body(11, color: AppColors.inkFaint)),
-            ),
           const SizedBox(height: 16),
           _label('期限日時'),
           Row(children: [

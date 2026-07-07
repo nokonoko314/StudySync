@@ -1,3 +1,5 @@
+import 'group_project.dart';
+
 enum WallpaperType { defaultBg, color, image }
 
 /// アプリ全体の設定。設定画面の各シートから読み書きされます。
@@ -13,7 +15,8 @@ class AppSettings {
   bool notifDeadline;
   int reviewLeadMinutes; // 復習タスク：期限の何分前に知らせるか。既定60分
   int deadlineLeadMinutes; // 通常タスク：期限の何分前に知らせるか。既定180分
-  List<String> knownGroups; // 一度使った「プロジェクト」名を覚えておき、次回から候補として出す
+  List<GroupProject> knownGroups; // 「プロジェクト」の一覧（名前＋任意の期間）
+  String? lastUsedGroup; // 直近のタスクで選んだ「プロジェクト」名。新規タスク作成時の初期値に使う
   int defaultDueHour; // 新規タスク作成時の既定の期限時刻（時）。既定23時
   int defaultDueMinute; // 新規タスク作成時の既定の期限時刻（分）
   WallpaperType wallpaperType;
@@ -33,7 +36,8 @@ class AppSettings {
     this.notifDeadline = true,
     this.reviewLeadMinutes = 60,
     this.deadlineLeadMinutes = 180,
-    List<String>? knownGroups,
+    List<GroupProject>? knownGroups,
+    this.lastUsedGroup,
     this.defaultDueHour = 23,
     this.defaultDueMinute = 0,
     this.wallpaperType = WallpaperType.defaultBg,
@@ -57,7 +61,8 @@ class AppSettings {
         'notifDeadline': notifDeadline,
         'reviewLeadMinutes': reviewLeadMinutes,
         'deadlineLeadMinutes': deadlineLeadMinutes,
-        'knownGroups': knownGroups,
+        'knownGroups': knownGroups.map((g) => g.toJson()).toList(),
+        'lastUsedGroup': lastUsedGroup,
         'defaultDueHour': defaultDueHour,
         'defaultDueMinute': defaultDueMinute,
         'wallpaperType': wallpaperType.index,
@@ -81,7 +86,8 @@ class AppSettings {
         notifDeadline: json['notifDeadline'] as bool? ?? true,
         reviewLeadMinutes: json['reviewLeadMinutes'] as int? ?? 60,
         deadlineLeadMinutes: json['deadlineLeadMinutes'] as int? ?? 180,
-        knownGroups: (json['knownGroups'] as List?)?.map((e) => e as String).toList(),
+        knownGroups: _parseKnownGroups(json['knownGroups']),
+        lastUsedGroup: json['lastUsedGroup'] as String?,
         defaultDueHour: json['defaultDueHour'] as int? ?? 23,
         defaultDueMinute: json['defaultDueMinute'] as int? ?? 0,
         wallpaperType:
@@ -90,4 +96,14 @@ class AppSettings {
         wallpaperImagePath: json['wallpaperImagePath'] as String?,
         customWallpaperColors: (json['customWallpaperColors'] as List?)?.map((e) => e as int).toList(),
       );
+}
+
+/// 以前のバージョン（`knownGroups` が単なる名前の配列だった頃）のデータでも
+/// 問題なく読み込めるよう、要素が文字列でもオブジェクトでも対応する。
+List<GroupProject>? _parseKnownGroups(dynamic raw) {
+  if (raw is! List) return null;
+  return raw.map((e) {
+    if (e is String) return GroupProject(name: e);
+    return GroupProject.fromJson(Map<String, dynamic>.from(e as Map));
+  }).toList();
 }

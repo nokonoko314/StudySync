@@ -1,5 +1,6 @@
 import '../models/project.dart';
 import '../models/task.dart';
+import '../models/group_project.dart';
 import '../app_theme.dart';
 import '../state/app_state.dart';
 
@@ -50,8 +51,8 @@ void seedDemoData(AppState state) {
   state.tasks = [t1, t2, t3];
 
   for (final t in state.tasks) {
-    if (t.group != null && !state.settings.knownGroups.contains(t.group)) {
-      state.settings.knownGroups.add(t.group!);
+    if (t.group != null && !state.settings.knownGroups.any((g) => g.name == t.group)) {
+      state.settings.knownGroups.add(GroupProject(name: t.group!));
     }
   }
 }

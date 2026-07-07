@@ -18,6 +18,7 @@ import '../widgets/pressable.dart';
 import '../widgets/interval_chip_editor.dart';
 import '../widgets/forgetting_curve_chart.dart';
 import '../widgets/color_picker_dialog.dart';
+import '../widgets/google_button.dart';
 import '../services/wallpaper_file_service.dart';
 
 // =====================================================================
@@ -302,6 +303,7 @@ class _GoogleLinkBody extends StatefulWidget {
 
 class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
   bool _connecting = false;
+  bool _finishing = false; // _finishSignIn自体の二重実行防止（_connectingとは別で管理する）
   String? _error;
   StreamSubscription<GoogleSignInAccount?>? _sub;
 
@@ -327,7 +329,8 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
   /// どちらでも）共通で行う処理：Firebaseへの認証情報の引き渡しと、
   /// アプリ側のデータ連携。
   Future<void> _finishSignIn(GoogleSignInAccount googleUser) async {
-    if (_connecting) return; // 二重実行防止
+    if (_finishing) return; // 二重実行防止
+    _finishing = true;
     setState(() {
       _connecting = true;
       _error = null;
@@ -354,6 +357,7 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
       debugPrint('[GoogleConnect] stack:\n$st');
       if (mounted) setState(() => _error = '連携に失敗しました。Firebaseの設定を確認してください。\n($e)');
     } finally {
+      _finishing = false;
       if (mounted) setState(() => _connecting = false);
     }
   }
@@ -445,14 +449,8 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
           // Web版：Google公式の描画ボタン（ポップアップ方式より安定している）
           Center(child: buildGoogleSignInButton())
         else
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _connect,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.indigo, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              child: Text('Googleでサインインして連携', style: AppTheme.body(14, weight: FontWeight.w700)),
-            ),
-          ),
+          // Android/iOS：Web版の公式ボタンと見た目を揃えた自前ボタン
+          GoogleSignInButton(onPressed: _connect),
         if (_error != null) ...[
           const SizedBox(height: 12),
           Text(_error!, textAlign: TextAlign.center, style: AppTheme.body(11.5, color: AppColors.coral)),

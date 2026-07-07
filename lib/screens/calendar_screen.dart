@@ -91,19 +91,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 // 選択中の日はセルの背景がインディゴになるため、通常タスクの
                 // インディゴ色のドットが同化して見えなくなってしまう。
                 // 選択中だけ、ドットに白い輪をつけてコントラストを確保する。
-                final dots = dayTasks.map((t) {
-                  final color = state.projectById(t.projectId)?.color ?? AppColors.inkFaint;
-                  return Container(
-                    width: 4.2,
-                    height: 4.2,
-                    margin: const EdgeInsets.all(0.8),
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected ? Border.all(color: Colors.white, width: 0.9) : null,
+                // タスクが多い日でもセルの高さが崩れないよう、ドットは
+                // 最大4個までにして、それ以上は「+N」のドットにまとめる。
+                const maxDots = 5;
+                final shown = dayTasks.length > maxDots ? maxDots - 1 : dayTasks.length;
+                final dots = [
+                  for (final t in dayTasks.take(shown))
+                    Container(
+                      width: 4.2,
+                      height: 4.2,
+                      margin: const EdgeInsets.all(0.8),
+                      decoration: BoxDecoration(
+                        color: state.projectById(t.projectId)?.color ?? AppColors.inkFaint,
+                        shape: BoxShape.circle,
+                        border: isSelected ? Border.all(color: Colors.white, width: 0.9) : null,
+                      ),
                     ),
-                  );
-                }).toList();
+                  if (dayTasks.length > maxDots)
+                    Container(
+                      margin: const EdgeInsets.all(0.8),
+                      padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                      constraints: const BoxConstraints(minWidth: 4.2, minHeight: 4.2),
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.white : AppColors.inkFaint,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        '+${dayTasks.length - shown}',
+                        style: AppTheme.mono(6.5, weight: FontWeight.w800, color: isSelected ? AppColors.indigo : AppColors.surface),
+                      ),
+                    ),
+                ];
                 return Pressable(
                   onTap: () => setState(() => _selected = startOfDay(c.date)),
                   child: Container(
