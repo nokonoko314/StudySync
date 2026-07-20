@@ -160,7 +160,7 @@ class _GroupEditBodyState extends State<_GroupEditBody> {
               ),
             ),
             if (value != null)
-              Pressable(onTap: onClear, child: const Icon(Icons.close, size: 14, color: AppColors.inkFaint)),
+              Pressable(onTap: onClear, child: Icon(Icons.close, size: 14, color: AppColors.inkFaint)),
           ]),
         ),
       ),
@@ -177,9 +177,9 @@ class _GroupEditBodyState extends State<_GroupEditBody> {
         filled: true,
         fillColor: AppColors.surface2,
         contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(11), borderSide: const BorderSide(color: AppColors.line, width: 1.5)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11), borderSide: const BorderSide(color: AppColors.line, width: 1.5)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11), borderSide: const BorderSide(color: AppColors.indigo, width: 1.5)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(11), borderSide: BorderSide(color: AppColors.line, width: 1.5)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11), borderSide: BorderSide(color: AppColors.line, width: 1.5)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11), borderSide: BorderSide(color: AppColors.indigo, width: 1.5)),
       );
 
   BoxDecoration _boxDecoration() => BoxDecoration(

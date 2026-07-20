@@ -14,7 +14,7 @@ void showTaskDetailSheet(BuildContext context, String taskId) {
     title: 'タスクの詳細',
     actions: [
       IconButton(
-        icon: const Icon(Icons.edit_outlined, color: AppColors.ink),
+        icon: Icon(Icons.edit_outlined, color: AppColors.ink),
         onPressed: () {
           Navigator.pop(context);
           showAddEditTaskSheet(context, taskId: taskId);
@@ -43,7 +43,7 @@ void showTaskDetailSheet(BuildContext context, String taskId) {
           }
         },
       ),
-      IconButton(icon: const Icon(Icons.close, color: AppColors.ink), onPressed: () => Navigator.pop(context)),
+      IconButton(icon: Icon(Icons.close, color: AppColors.ink), onPressed: () => Navigator.pop(context)),
     ],
     bodyBuilder: (ctx) => _TaskDetailBody(taskId: taskId),
   );
@@ -131,7 +131,7 @@ class _TaskDetailBody extends StatelessWidget {
               onPressed: () => state.toggleComplete(t.id),
               style: OutlinedButton.styleFrom(
                 backgroundColor: t.completed ? Colors.transparent : AppColors.indigo,
-                side: t.completed ? const BorderSide(color: AppColors.line) : BorderSide.none,
+                side: t.completed ? BorderSide(color: AppColors.line) : BorderSide.none,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               child: Text(t.completed ? '未完了に戻す' : '完了にする',
@@ -153,7 +153,7 @@ class _TaskDetailBody extends StatelessWidget {
                     Navigator.pop(context);
                     showTimerSheet(context, t.id);
                   },
-                  icon: const Icon(Icons.play_arrow, size: 14, color: AppColors.indigo),
+                  icon: Icon(Icons.play_arrow, size: 14, color: AppColors.indigo),
                   label: Text('計測する', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.indigo)),
                   style: OutlinedButton.styleFrom(backgroundColor: AppColors.indigoSoft, side: BorderSide.none),
                 ),
@@ -188,8 +188,8 @@ class _TaskDetailBody extends StatelessWidget {
                                   state.deleteSession(t.id, s.id);
                                 }
                               },
-                              child: const Padding(
-                                padding: EdgeInsets.all(2),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
                                 child: Icon(Icons.close, size: 14, color: AppColors.inkFaint),
                               ),
                             ),
@@ -224,7 +224,7 @@ class _TaskDetailBody extends StatelessWidget {
 
   Widget _detailRow(String label, String value, {bool isLast = false}) => Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(border: isLast ? null : const Border(bottom: BorderSide(color: AppColors.line))),
+        decoration: BoxDecoration(border: isLast ? null : Border(bottom: BorderSide(color: AppColors.line))),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(label, style: AppTheme.body(13, color: AppColors.inkSoft)),
           Text(value, style: AppTheme.body(13, weight: FontWeight.w700)),

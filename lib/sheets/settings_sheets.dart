@@ -13,6 +13,7 @@ import 'dart:io';
 import '../state/app_state.dart';
 import '../models/app_settings.dart';
 import '../app_theme.dart';
+import '../utils/date_utils.dart';
 import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
 import '../widgets/interval_chip_editor.dart';
@@ -120,7 +121,7 @@ class _WallpaperBodyState extends State<_WallpaperBody> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.surface2, border: Border.all(color: AppColors.line, width: 1.5)),
-                  child: const Icon(Icons.add, size: 16, color: AppColors.inkSoft),
+                  child: Icon(Icons.add, size: 16, color: AppColors.inkSoft),
                 ),
               ),
             ],
@@ -136,8 +137,8 @@ class _WallpaperBodyState extends State<_WallpaperBody> {
           OutlinedButton.icon(
             onPressed: _loading ? null : _pickPhoto,
             icon: _loading
-                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.indigo))
-                : const Icon(Icons.photo_outlined, size: 16, color: AppColors.indigo),
+                ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.indigo))
+                : Icon(Icons.photo_outlined, size: 16, color: AppColors.indigo),
             label: Text('ライブラリから選択', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.indigo)),
             style: OutlinedButton.styleFrom(backgroundColor: AppColors.indigoSoft, side: BorderSide.none, padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16)),
           ),
@@ -347,8 +348,8 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
       if (!mounted) return;
       await context.read<AppState>().connectGoogle(user);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('連携しました'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('連携しました'),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.ink,
       ));
@@ -412,10 +413,10 @@ class _GoogleLinkBodyState extends State<_GoogleLinkBody> {
     final state = context.watch<AppState>();
     Widget content;
     if (_connecting) {
-      content = Column(mainAxisSize: MainAxisSize.min, children: const [
+      content = Column(mainAxisSize: MainAxisSize.min, children: [
         SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.indigo)),
-        SizedBox(height: 14),
-        Text('連携しています…'),
+        const SizedBox(height: 14),
+        const Text('連携しています…'),
       ]);
     } else if (state.settings.googleConnected) {
       content = Column(mainAxisSize: MainAxisSize.min, children: [
@@ -494,7 +495,7 @@ class _NotificationBody extends StatelessWidget {
   Future<void> _togglePermission(BuildContext context, AppState state) async {
     if (state.settings.notifGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('通知をオフにするには端末の設定から変更してください'), backgroundColor: AppColors.ink));
+          SnackBar(content: const Text('通知をオフにするには端末の設定から変更してください'), backgroundColor: AppColors.ink));
       return;
     }
     final status = await Permission.notification.request();
@@ -618,7 +619,7 @@ class _NotificationBody extends StatelessWidget {
   Widget _toggleRow(BuildContext context, String title, String sub, bool value, ValueChanged<bool> onChanged) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 11),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
       child: Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -628,6 +629,307 @@ class _NotificationBody extends StatelessWidget {
         ),
         CupertinoSwitch(value: value, activeColor: AppColors.sage, onChanged: onChanged),
       ]),
+    );
+  }
+}
+
+// ── UIのメインカラー（アクセントカラー）─────────────────────────
+
+void showAccentColorSheet(BuildContext context) {
+  showAppSheet(context, title: 'UIの色', bodyBuilder: (ctx) => const _AccentColorBody());
+}
+
+class _AccentColorBody extends StatelessWidget {
+  const _AccentColorBody();
+
+  // よく使われそうな色のプリセット（インディゴ・コーラル・セージ・ゴールドなど）
+  static const _presets = [
+    Color(0xFF423E99), // 既定（インディゴ）
+    Color(0xFFE2613B),
+    Color(0xFF4F8868),
+    Color(0xFFC9A227),
+    Color(0xFF2E7D9A),
+    Color(0xFF9A4F8C),
+    Color(0xFFD1495B),
+    Color(0xFF2F6690),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final current = AppColors.indigo;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ボタンや選択中の表示など、アプリ全体のメインカラーを変更します。', style: AppTheme.body(12.5, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final c in _presets)
+                  Pressable(
+                    onTap: () => state.setAccentColor(c),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: c,
+                        shape: BoxShape.circle,
+                        border: current.value == c.value ? Border.all(color: AppColors.ink, width: 2.5) : null,
+                      ),
+                      child: current.value == c.value ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                    ),
+                  ),
+                Pressable(
+                  onTap: () async {
+                    final picked = await showColorPickerDialog(context, current);
+                    if (picked != null) state.setAccentColor(picked);
+                  },
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.line, width: 1.5),
+                    ),
+                    child: Icon(Icons.add, size: 18, color: AppColors.inkFaint),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => state.resetAccentColor(),
+                style: TextButton.styleFrom(backgroundColor: AppColors.surface2, padding: const EdgeInsets.symmetric(vertical: 13)),
+                child: Text('既定の色に戻す', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.inkSoft)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── カレンダーの日別タスク表示の大きさ ─────────────────────────
+
+void showCalendarSizeSheet(BuildContext context) {
+  showAppSheet(context, title: 'カレンダーの表示サイズ', bodyBuilder: (ctx) => const _CalendarSizeBody());
+}
+
+class _CalendarSizeBody extends StatelessWidget {
+  const _CalendarSizeBody();
+  static const _options = [0.9, 1.0, 1.15];
+  static const _labels = {'0.9': '小', '1.0': '標準', '1.15': '大'};
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('カレンダーの「教科ごとの見出し」やタスクカードの大きさを変更します。', style: AppTheme.body(12.5, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99)),
+              child: Row(
+                children: _options.map((v) {
+                  final active = state.settings.calendarAgendaScale == v;
+                  return Expanded(
+                    child: Pressable(
+                      onTap: () => state.setCalendarAgendaScale(v),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        decoration: BoxDecoration(color: active ? AppColors.indigo : Colors.transparent, borderRadius: BorderRadius.circular(99)),
+                        child: Center(
+                          child: Text(_labels[v.toString()] ?? '標準',
+                              style: AppTheme.body(12.5, weight: FontWeight.w700, color: active ? Colors.white : AppColors.inkSoft)),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 学習時間の表記（分のみ／時間＋分） ─────────────────────────
+
+void showDurationFormatSheet(BuildContext context) {
+  showAppSheet(context, title: '学習時間の表記', bodyBuilder: (ctx) => const _DurationFormatBody());
+}
+
+class _DurationFormatBody extends StatelessWidget {
+  const _DurationFormatBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('カレンダーや統計などで、学習時間をどう表示するかを選べます。', style: AppTheme.body(12.5, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            _option(context, state, useHourMinute: true, title: '時間＋分で表示', example: '例：1時間10分'),
+            const SizedBox(height: 10),
+            _option(context, state, useHourMinute: false, title: '分のみで表示', example: '例：70分'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _option(BuildContext context, AppState state, {required bool useHourMinute, required String title, required String example}) {
+    final active = state.settings.durationUseHourMinute == useHourMinute;
+    return Pressable(
+      onTap: () => state.setDurationUseHourMinute(useHourMinute),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: active ? AppColors.indigoSoft : AppColors.surface2,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: active ? AppColors.indigo : AppColors.line, width: 1.5),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: AppTheme.body(13.5, weight: FontWeight.w700, color: active ? AppColors.indigo : AppColors.ink)),
+              Text(example, style: AppTheme.body(11.5, color: AppColors.inkSoft)),
+            ]),
+          ),
+          if (active) Icon(Icons.check_circle, size: 20, color: AppColors.indigo),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── ダークモード ─────────────────────────────────────────
+
+void showThemeModeSheet(BuildContext context) {
+  showAppSheet(context, title: 'ダークモード', bodyBuilder: (ctx) => const _ThemeModeBody());
+}
+
+class _ThemeModeBody extends StatelessWidget {
+  const _ThemeModeBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('画面の明るさ・暗さを選べます。', style: AppTheme.body(12.5, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            _option(state, AppThemeMode.system, '端末に合わせる', '端末のライト／ダーク設定に自動で追従します'),
+            const SizedBox(height: 10),
+            _option(state, AppThemeMode.light, '常にライト', ''),
+            const SizedBox(height: 10),
+            _option(state, AppThemeMode.dark, '常にダーク', ''),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _option(AppState state, AppThemeMode mode, String title, String sub) {
+    final active = state.settings.themeMode == mode;
+    return Pressable(
+      onTap: () => state.setThemeMode(mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: active ? AppColors.indigoSoft : AppColors.surface2,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: active ? AppColors.indigo : AppColors.line, width: 1.5),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: AppTheme.body(13.5, weight: FontWeight.w700, color: active ? AppColors.indigo : AppColors.ink)),
+              if (sub.isNotEmpty) Text(sub, style: AppTheme.body(11, color: AppColors.inkSoft)),
+            ]),
+          ),
+          if (active) Icon(Icons.check_circle, size: 20, color: AppColors.indigo),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── 週の学習時間の目標 ────────────────────────────────────
+
+void showWeeklyGoalSheet(BuildContext context) {
+  showAppSheet(context, title: '週の目標時間', bodyBuilder: (ctx) => const _WeeklyGoalBody());
+}
+
+class _WeeklyGoalBody extends StatelessWidget {
+  const _WeeklyGoalBody();
+  static const _presetsMinutes = [0, 180, 300, 420, 600, 900];
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final current = state.settings.weeklyGoalMinutes;
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('1週間の学習時間の目標を決めておくと、統計「まとめ」タブに進み具合が表示されます。', style: AppTheme.body(12.5, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _presetsMinutes.map((m) {
+                final active = current == m;
+                final label = m == 0 ? '設定しない' : formatMinutes(m);
+                return Pressable(
+                  onTap: () => state.setWeeklyGoalMinutes(m),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: active ? AppColors.indigo : AppColors.surface2,
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(color: active ? AppColors.indigo : AppColors.line),
+                    ),
+                    child: Text(label, style: AppTheme.body(12.5, weight: FontWeight.w700, color: active ? Colors.white : AppColors.inkSoft)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

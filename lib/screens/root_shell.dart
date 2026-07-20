@@ -6,6 +6,7 @@ import '../models/app_settings.dart';
 import '../app_theme.dart';
 import '../nav_meta.dart';
 import '../widgets/pressable.dart';
+import '../widgets/timer_bar.dart';
 import 'home_screen.dart';
 import 'calendar_screen.dart';
 import 'stats_screen.dart';
@@ -19,15 +20,38 @@ const Map<String, AppScreen> _screenByKey = {
 };
 
 /// アプリの土台。背景（壁紙）、4画面の切り替え、ボトムナビを管理します。
-class RootShell extends StatelessWidget {
+class RootShell extends StatefulWidget {
   const RootShell({super.key});
+
+  @override
+  State<RootShell> createState() => _RootShellState();
+}
+
+class _RootShellState extends State<RootShell> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // 「端末に合わせる」設定のとき、OS側のライト/ダーク切り替えに追従する。
+  @override
+  void didChangePlatformBrightness() {
+    context.read<AppState>().refreshSystemBrightness();
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
     if (!state.loaded) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.bg,
         body: Center(child: CircularProgressIndicator(color: AppColors.indigo)),
       );
@@ -51,29 +75,35 @@ class RootShell extends StatelessWidget {
           ),
         ),
       ]),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(color: AppColors.surface, border: Border(top: BorderSide(color: AppColors.line))),
-        padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
-        child: SafeArea(
-          top: false,
-          child: Row(
-            children: state.settings.navOrder.map((key) {
-              final meta = kNavMeta[key]!;
-              final screenEnum = _screenByKey[key]!;
-              final active = state.activeScreen == screenEnum;
-              return Expanded(
-                child: Pressable(
-                  onTap: () => state.setActiveScreen(screenEnum),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(meta.icon, size: 21, color: active ? AppColors.indigo : AppColors.inkFaint),
-                    const SizedBox(height: 3),
-                    Text(meta.label, style: AppTheme.body(10.5, weight: FontWeight.w700, color: active ? AppColors.indigo : AppColors.inkFaint)),
-                  ]),
-                ),
-              );
-            }).toList(),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const TimerBar(),
+          Container(
+            decoration: BoxDecoration(color: AppColors.surface, border: Border(top: BorderSide(color: AppColors.line))),
+            padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: state.settings.navOrder.map((key) {
+                  final meta = kNavMeta[key]!;
+                  final screenEnum = _screenByKey[key]!;
+                  final active = state.activeScreen == screenEnum;
+                  return Expanded(
+                    child: Pressable(
+                      onTap: () => state.setActiveScreen(screenEnum),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(meta.icon, size: 21, color: active ? AppColors.indigo : AppColors.inkFaint),
+                        const SizedBox(height: 3),
+                        Text(meta.label, style: AppTheme.body(10.5, weight: FontWeight.w700, color: active ? AppColors.indigo : AppColors.inkFaint)),
+                      ]),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

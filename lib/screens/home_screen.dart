@@ -58,7 +58,7 @@ class HomeScreen extends StatelessWidget {
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             Text(project.name, style: AppTheme.body(11.5, weight: FontWeight.w700, color: AppColors.indigo)),
                             const SizedBox(width: 6),
-                            const Icon(Icons.close, size: 11, color: AppColors.indigo),
+                            Icon(Icons.close, size: 11, color: AppColors.indigo),
                           ]),
                         ),
                       ),
@@ -89,8 +89,8 @@ class HomeScreen extends StatelessWidget {
                     child: Container(
                       width: 34,
                       height: 34,
-                      decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-                      child: const Icon(Icons.menu_rounded, size: 16, color: AppColors.ink),
+                      decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+                      child: Icon(Icons.menu_rounded, size: 16, color: AppColors.ink),
                     ),
                   ),
                 ),
@@ -122,7 +122,7 @@ class HomeScreen extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 60),
           child: Column(children: [
-            const Icon(Icons.auto_graph_rounded, size: 54, color: AppColors.inkFaint),
+            Icon(Icons.auto_graph_rounded, size: 54, color: AppColors.inkFaint),
             const SizedBox(height: 14),
             Text('タスクがありません', style: AppTheme.display(16)),
             const SizedBox(height: 4),

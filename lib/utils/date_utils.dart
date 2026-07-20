@@ -1,6 +1,15 @@
 // 日付・時間のフォーマット用ユーティリティ。
 // HTML プロトタイプの formatDueLabel / formatDuration などと同じ仕様です。
 
+/// 学習時間の表示形式（設定 →「表示」から変更可能）。
+/// AppColors の accent color と同じく、グローバルなミュータブル値として持ち、
+/// 設定を変えるとアプリ全体の表示にすぐ反映されるようにしている。
+class TimeDisplaySettings {
+  /// true: 60分以上は「1時間10分」のように時間＋分で表示
+  /// false: 常に「70分」のように分だけで表示
+  static bool useHourMinute = true;
+}
+
 const List<String> weekdaysJp = ['日', '月', '火', '水', '木', '金', '土'];
 
 String pad2(int n) => n < 10 ? '0$n' : '$n';
@@ -30,14 +39,20 @@ String formatDueLabel(DateTime due, bool overdue) {
   return '${due.month}/${due.day}(${weekdayJp(due)}) $hh';
 }
 
-String formatDuration(int seconds) {
-  if (seconds <= 0) return '0分';
-  if (seconds < 60) return '$seconds秒';
-  final minutes = (seconds / 60).round();
-  if (minutes < 60) return '$minutes分';
+/// 分数を、設定に応じて「70分」または「1時間10分」の形式にする。
+/// カレンダー・統計・プロジェクトの各画面で、学習時間の表示に共通で使う。
+String formatMinutes(int minutes) {
+  if (minutes <= 0) return '0分';
+  if (!TimeDisplaySettings.useHourMinute || minutes < 60) return '$minutes分';
   final h = minutes ~/ 60;
   final m = minutes % 60;
   return m > 0 ? '$h時間$m分' : '$h時間';
+}
+
+String formatDuration(int seconds) {
+  if (seconds <= 0) return '0分';
+  if (seconds < 60) return '$seconds秒';
+  return formatMinutes((seconds / 60).round());
 }
 
 String formatHMS(int totalSeconds) {

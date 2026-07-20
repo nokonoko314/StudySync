@@ -10,6 +10,8 @@ import '../services/persistence_service.dart';
 import '../services/sync_service.dart';
 import '../services/notification_service.dart';
 import '../services/seed_data.dart';
+import '../app_theme.dart';
+import '../utils/date_utils.dart';
 
 enum AppScreen { home, calendar, stats, settings }
 
@@ -71,6 +73,14 @@ class AppState extends ChangeNotifier {
         // ここまでで何も読み込めていなければ、最後の手段としてデモデータを入れる
         seedDemoData(this);
       }
+      // 保存されているUIカラー（アクセントカラー）があれば反映する。
+      if (settings.accentColor != null) {
+        AppColors.setAccent(Color(settings.accentColor!));
+      }
+      // 学習時間の表示形式（分のみ／時間＋分）を反映する。
+      TimeDisplaySettings.useHourMinute = settings.durationUseHourMinute;
+      // ダークモードの設定を反映する。
+      applyThemeMode();
       // ここを必ず通すことで、どこかで失敗・タイムアウトしてもアプリが
       // 「読み込み中」のまま固まらないようにしている。
       _loaded = true;
@@ -166,6 +176,9 @@ class AppState extends ChangeNotifier {
     }
     settings.googleConnected = true;
     settings.googleEmail = user.email ?? '';
+    if (settings.accentColor != null) AppColors.setAccent(Color(settings.accentColor!));
+    TimeDisplaySettings.useHourMinute = settings.durationUseHourMinute;
+    applyThemeMode();
     await PersistenceService.save(projects, tasks, settings);
     await SyncService.push(user.uid, projects, tasks, settings);
     notifyListeners();
@@ -360,6 +373,52 @@ class AppState extends ChangeNotifier {
     t.reviewsGenerated = true;
   }
 
+  // ── 学習タイマー（バックグラウンドでも計測を続ける） ──────────────
+  //
+  // Dartの Timer/Stopwatch はアプリがバックグラウンドに回ると一時停止して
+  // しまうことがあるため、「開始した時刻（壁時計時間）」だけを保存しておき、
+  // 経過時間は常に「今の時刻 - 開始時刻」で計算する方式にしている。
+  // これなら、アプリを閉じても・再起動しても、開始時刻さえ残っていれば
+  // 正しい経過時間を復元できる。
+
+  String? get activeTimerTaskId => settings.activeTimerTaskId;
+
+  DateTime? get activeTimerStartedAt =>
+      settings.activeTimerStartedAtMs != null ? DateTime.fromMillisecondsSinceEpoch(settings.activeTimerStartedAtMs!) : null;
+
+  int get activeTimerElapsedSeconds {
+    final started = activeTimerStartedAt;
+    if (started == null) return 0;
+    final diff = DateTime.now().difference(started).inSeconds;
+    return diff < 0 ? 0 : diff;
+  }
+
+  /// 指定したタスクの計測を開始する。既に別のタスクを計測中なら、
+  /// そちらは先に確定保存してから切り替える。
+  void startTimer(String taskId) {
+    if (settings.activeTimerTaskId != null && settings.activeTimerTaskId != taskId) {
+      stopTimer();
+    }
+    settings.activeTimerTaskId = taskId;
+    settings.activeTimerStartedAtMs = DateTime.now().millisecondsSinceEpoch;
+    _persist();
+    notifyListeners();
+  }
+
+  /// 計測中のタイマーを停止し、経過時間を学習記録として確定保存する。
+  void stopTimer() {
+    final taskId = settings.activeTimerTaskId;
+    final seconds = activeTimerElapsedSeconds;
+    settings.activeTimerTaskId = null;
+    settings.activeTimerStartedAtMs = null;
+    if (taskId != null && seconds > 0 && tasks.any((t) => t.id == taskId)) {
+      commitSession(taskId, seconds);
+    } else {
+      _persist();
+      notifyListeners();
+    }
+  }
+
   /// タイマーを停止して記録を保存する（durationSeconds <= 0 のときは何もしない）。
   void commitSession(String taskId, int durationSeconds) {
     if (durationSeconds <= 0) return;
@@ -378,6 +437,21 @@ class AppState extends ChangeNotifier {
     if (session.id.isEmpty) return;
     t.sessions.removeWhere((s) => s.id == sessionId);
     t.timeSpent = (t.timeSpent - session.durationSeconds).clamp(0, 1 << 31);
+    _persist();
+    notifyListeners();
+  }
+
+  /// 記録ミスの修正用：学習記録（セッション）の開始・終了時刻を直接編集する。
+  /// タスクの合計学習時間（timeSpent）も差分をあわせて更新する。
+  void editSession(String taskId, String sessionId, {required DateTime newStart, required DateTime newEnd}) {
+    final t = tasks.firstWhere((t) => t.id == taskId);
+    final idx = t.sessions.indexWhere((s) => s.id == sessionId);
+    if (idx == -1) return;
+    final newDuration = newEnd.difference(newStart).inSeconds;
+    if (newDuration <= 0) return;
+    final oldDuration = t.sessions[idx].durationSeconds;
+    t.sessions[idx] = StudySession(id: sessionId, date: newEnd, durationSeconds: newDuration);
+    t.timeSpent = (t.timeSpent - oldDuration + newDuration).clamp(0, 1 << 31);
     _persist();
     notifyListeners();
   }
@@ -458,6 +532,74 @@ class AppState extends ChangeNotifier {
     if (newIndex < 0 || newIndex >= settings.navOrder.length) return;
     final item = settings.navOrder.removeAt(oldIndex);
     settings.navOrder.insert(newIndex, item);
+    _persist();
+    notifyListeners();
+  }
+
+  /// UIのメインカラー（アクセントカラー）を変更する。
+  void setAccentColor(Color color) {
+    settings.accentColor = color.value;
+    AppColors.setAccent(color);
+    _persist();
+    notifyListeners();
+  }
+
+  /// UIのメインカラーを既定の色（インディゴ）に戻す。
+  void resetAccentColor() {
+    settings.accentColor = null;
+    AppColors.setAccent(const Color(0xFF423E99));
+    _persist();
+    notifyListeners();
+  }
+
+  /// カレンダーの日別タスク表示の大きさ（開閉ヘッダー・カード）を変更する。
+  void setCalendarAgendaScale(double scale) {
+    settings.calendarAgendaScale = scale;
+    _persist();
+    notifyListeners();
+  }
+
+  /// 学習時間の表示形式を変更する（true: 「1時間10分」／false: 「70分」）。
+  void setDurationUseHourMinute(bool useHourMinute) {
+    settings.durationUseHourMinute = useHourMinute;
+    TimeDisplaySettings.useHourMinute = useHourMinute;
+    _persist();
+    notifyListeners();
+  }
+
+  /// 現在の設定（端末に合わせる／常にライト／常にダーク）から、
+  /// 実際にダーク配色にするかどうかを判定して反映する。
+  /// 「端末に合わせる」のときは、その時点のOSの明暗設定を見る。
+  void applyThemeMode() {
+    final dark = switch (settings.themeMode) {
+      AppThemeMode.dark => true,
+      AppThemeMode.light => false,
+      AppThemeMode.system => WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark,
+    };
+    if (AppColors.isDark == dark) return;
+    AppColors.setDark(dark);
+    // indigoSoft は明暗によって計算し直す必要があるため、同じ色で再計算する。
+    AppColors.setAccent(AppColors.indigo);
+  }
+
+  /// ダークモードの設定を変更する。
+  void setThemeMode(AppThemeMode mode) {
+    settings.themeMode = mode;
+    applyThemeMode();
+    _persist();
+    notifyListeners();
+  }
+
+  /// 端末側の明暗設定が変わったときに呼ばれる（「端末に合わせる」時のみ意味がある）。
+  void refreshSystemBrightness() {
+    if (settings.themeMode != AppThemeMode.system) return;
+    applyThemeMode();
+    notifyListeners();
+  }
+
+  /// 週の学習時間の目標（分）を変更する。0にすると目標なしになる。
+  void setWeeklyGoalMinutes(int minutes) {
+    settings.weeklyGoalMinutes = minutes;
     _persist();
     notifyListeners();
   }

@@ -37,7 +37,7 @@ class _ChangelogBody extends StatelessWidget {
                       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Padding(
                           padding: const EdgeInsets.only(top: 6, right: 8),
-                          child: Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppColors.inkFaint, shape: BoxShape.circle)),
+                          child: Container(width: 4, height: 4, decoration: BoxDecoration(color: AppColors.inkFaint, shape: BoxShape.circle)),
                         ),
                         Expanded(child: Text(c, style: AppTheme.body(13, color: AppColors.inkSoft, weight: FontWeight.w400).copyWith(height: 1.5))),
                       ]),

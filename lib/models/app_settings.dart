@@ -2,6 +2,9 @@ import 'group_project.dart';
 
 enum WallpaperType { defaultBg, color, image }
 
+/// ダークモードの設定。system: 端末の設定に合わせる。
+enum AppThemeMode { system, light, dark }
+
 /// アプリ全体の設定。設定画面の各シートから読み書きされます。
 class AppSettings {
   double fontScale; // 0.875=小 / 1.0=標準 / 1.125=大 / 1.25=特大
@@ -23,6 +26,13 @@ class AppSettings {
   int? wallpaperColor; // Color.value
   String? wallpaperImagePath; // ローカルに保存した画像のパス
   List<int> customWallpaperColors; // ユーザーが追加したカスタム壁紙カラー（Color.value）
+  int? accentColor; // UIのメインカラー（Color.value）。nullなら既定のインディゴ
+  double calendarAgendaScale; // カレンダーの日別タスク表示の大きさ（0.9=小 / 1.0=標準 / 1.15=大）
+  String? activeTimerTaskId; // 計測中のタスクID（バックグラウンドでも計測を続けるため保存しておく）
+  int? activeTimerStartedAtMs; // 計測を開始した時刻（epoch ms）
+  bool durationUseHourMinute; // 学習時間の表示形式。true: 「1時間10分」／false: 「70分」
+  AppThemeMode themeMode; // ダークモードの設定
+  int weeklyGoalMinutes; // 週の学習時間の目標（分）。0＝未設定
 
   AppSettings({
     this.fontScale = 1.0,
@@ -44,6 +54,13 @@ class AppSettings {
     this.wallpaperColor,
     this.wallpaperImagePath,
     List<int>? customWallpaperColors,
+    this.accentColor,
+    this.calendarAgendaScale = 1.0,
+    this.activeTimerTaskId,
+    this.activeTimerStartedAtMs,
+    this.durationUseHourMinute = true,
+    this.themeMode = AppThemeMode.system,
+    this.weeklyGoalMinutes = 0,
   })  : navOrder = navOrder ?? ['home', 'calendar', 'stats', 'settings'],
         globalIntervals = globalIntervals ?? [1, 3, 7, 14, 30],
         knownGroups = knownGroups ?? [],
@@ -69,6 +86,13 @@ class AppSettings {
         'wallpaperColor': wallpaperColor,
         'wallpaperImagePath': wallpaperImagePath,
         'customWallpaperColors': customWallpaperColors,
+        'accentColor': accentColor,
+        'calendarAgendaScale': calendarAgendaScale,
+        'activeTimerTaskId': activeTimerTaskId,
+        'activeTimerStartedAtMs': activeTimerStartedAtMs,
+        'durationUseHourMinute': durationUseHourMinute,
+        'themeMode': themeMode.index,
+        'weeklyGoalMinutes': weeklyGoalMinutes,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -95,6 +119,13 @@ class AppSettings {
         wallpaperColor: json['wallpaperColor'] as int?,
         wallpaperImagePath: json['wallpaperImagePath'] as String?,
         customWallpaperColors: (json['customWallpaperColors'] as List?)?.map((e) => e as int).toList(),
+        accentColor: json['accentColor'] as int?,
+        calendarAgendaScale: (json['calendarAgendaScale'] as num?)?.toDouble() ?? 1.0,
+        activeTimerTaskId: json['activeTimerTaskId'] as String?,
+        activeTimerStartedAtMs: json['activeTimerStartedAtMs'] as int?,
+        durationUseHourMinute: json['durationUseHourMinute'] as bool? ?? true,
+        themeMode: AppThemeMode.values[json['themeMode'] as int? ?? 0],
+        weeklyGoalMinutes: json['weeklyGoalMinutes'] as int? ?? 0,
       );
 }
 

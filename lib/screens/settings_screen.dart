@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../models/app_settings.dart';
 import '../app_theme.dart';
+import '../utils/date_utils.dart';
 import '../changelog.dart';
 import '../sheets/settings_sheets.dart';
 import '../sheets/project_list_sheet.dart';
@@ -25,6 +27,23 @@ class SettingsScreen extends StatelessWidget {
         _group([
           _row(context, Icons.wallpaper_outlined, AppColors.indigoSoft, AppColors.indigo, '壁紙', '写真またはカラーを設定', () => showWallpaperSheet(context)),
           _row(context, Icons.format_size, AppColors.sageSoft, AppColors.sage, '文字の大きさ', _fontLabel(state.settings.fontScale), () => showFontSizeSheet(context)),
+          _row(context, Icons.palette_outlined, AppColors.indigoSoft, AppColors.indigo, 'UIの色', 'ボタンなどのメインカラーを変更', () => showAccentColorSheet(context)),
+          _row(context, Icons.dark_mode_outlined, AppColors.surface2, AppColors.inkSoft, 'ダークモード', _themeModeLabel(state.settings.themeMode),
+              () => showThemeModeSheet(context)),
+          _row(context, Icons.timer_outlined, AppColors.goldSoft, AppColors.gold, '学習時間の表記', _durationFormatLabel(state.settings.durationUseHourMinute),
+              () => showDurationFormatSheet(context)),
+        ]),
+        const SizedBox(height: 8),
+        _sectionLabel('カレンダー'),
+        _group([
+          _row(context, Icons.calendar_view_day_outlined, AppColors.indigoSoft, AppColors.indigo, '日別タスクの表示サイズ', _calendarSizeLabel(state.settings.calendarAgendaScale),
+              () => showCalendarSizeSheet(context)),
+        ]),
+        const SizedBox(height: 8),
+        _sectionLabel('統計'),
+        _group([
+          _row(context, Icons.flag_outlined, AppColors.sageSoft, AppColors.sage, '週の目標時間', _weeklyGoalLabel(state.settings.weeklyGoalMinutes),
+              () => showWeeklyGoalSheet(context)),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('タスク'),
@@ -72,6 +91,18 @@ class SettingsScreen extends StatelessWidget {
 
   String _fontLabel(double v) => {0.875: '小', 1.0: '標準', 1.125: '大', 1.25: '特大'}[v] ?? '標準';
 
+  String _calendarSizeLabel(double v) => {0.9: '小', 1.0: '標準', 1.15: '大'}[v] ?? '標準';
+
+  String _durationFormatLabel(bool useHourMinute) => useHourMinute ? '例：1時間10分' : '例：70分';
+
+  String _themeModeLabel(AppThemeMode mode) => switch (mode) {
+        AppThemeMode.system => '端末に合わせる',
+        AppThemeMode.light => '常にライト',
+        AppThemeMode.dark => '常にダーク',
+      };
+
+  String _weeklyGoalLabel(int minutes) => minutes == 0 ? '設定しない' : formatMinutes(minutes);
+
   String _timeLabel(int h, int m) => '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
 
   Future<void> _pickDefaultDueTime(BuildContext context, AppState state) async {
@@ -100,7 +131,7 @@ class SettingsScreen extends StatelessWidget {
         child: Column(children: [
           for (var i = 0; i < children.length; i++) ...[
             children[i],
-            if (i != children.length - 1) const Divider(height: 1, color: AppColors.line, indent: 15, endIndent: 15),
+            if (i != children.length - 1) Divider(height: 1, color: AppColors.line, indent: 15, endIndent: 15),
           ],
         ]),
       );
@@ -119,7 +150,7 @@ class SettingsScreen extends StatelessWidget {
               Text(sub, style: AppTheme.body(11.5, color: AppColors.inkSoft)),
             ]),
           ),
-          const Icon(Icons.chevron_right, size: 16, color: AppColors.inkFaint),
+          Icon(Icons.chevron_right, size: 16, color: AppColors.inkFaint),
         ]),
       ),
     );

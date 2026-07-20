@@ -88,7 +88,7 @@ class _ProjectHistoryBody extends StatelessWidget {
           ]),
           const SizedBox(height: 14),
           Row(children: [
-            Expanded(child: _statCard('学習時間', '$totalMin分')),
+            Expanded(child: _statCard('学習時間', formatMinutes(totalMin))),
             const SizedBox(width: 10),
             Expanded(child: _statCard('タスク数', '${tasks.length}件')),
             const SizedBox(width: 10),
@@ -172,7 +172,13 @@ class _ProjectHistoryBody extends StatelessWidget {
       child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
         Text('$day', style: AppTheme.body(11, weight: FontWeight.w700, color: textColor)),
         if (minutes > 0)
-          Text('$minutes分', style: AppTheme.mono(8, weight: FontWeight.w700, color: textColor)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(formatMinutes(minutes), style: AppTheme.mono(8, weight: FontWeight.w700, color: textColor)),
+            ),
+          ),
       ]),
     );
   }

@@ -45,7 +45,7 @@ Future<T?> showAppSheet<T>(
                   ...(actions ??
                       [
                         IconButton(
-                          icon: const Icon(Icons.close, color: AppColors.ink),
+                          icon: Icon(Icons.close, color: AppColors.ink),
                           onPressed: () => Navigator.pop(ctx),
                         ),
                       ]),

@@ -95,8 +95,8 @@ class TaskCard extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration:
-                        const BoxDecoration(color: AppColors.surface2, shape: BoxShape.circle),
-                    child: const Icon(Icons.access_time_rounded, size: 16, color: AppColors.indigo),
+                        BoxDecoration(color: AppColors.surface2, shape: BoxShape.circle),
+                    child: Icon(Icons.access_time_rounded, size: 16, color: AppColors.indigo),
                   ),
                 ),
                 if (task.timeSpent > 0) ...[

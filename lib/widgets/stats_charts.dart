@@ -40,7 +40,7 @@ class BarChartWidget extends StatelessWidget {
                   height: h,
                   width: double.infinity,
                   constraints: const BoxConstraints(maxWidth: 26),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.indigo,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(7), bottom: Radius.circular(3)),
                   ),

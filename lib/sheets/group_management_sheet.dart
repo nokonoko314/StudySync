@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/group_project.dart';
 import '../app_theme.dart';
+import '../utils/date_utils.dart';
 import '../widgets/sheet_scaffold.dart';
 import '../widgets/pressable.dart';
 import 'group_edit_sheet.dart';
@@ -120,7 +121,7 @@ class _GroupListBody extends StatelessWidget {
             Row(children: [
               _statChip(Icons.checklist_rounded, '$count件'),
               const SizedBox(width: 8),
-              _statChip(Icons.schedule_rounded, '$minutes分'),
+              _statChip(Icons.schedule_rounded, formatMinutes(minutes)),
             ]),
           ]),
         ),
@@ -143,8 +144,8 @@ class _GroupListBody extends StatelessWidget {
               width: 30,
               height: 30,
               alignment: Alignment.center,
-              decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-              child: const Icon(Icons.event_repeat_rounded, size: 14, color: AppColors.inkFaint),
+              decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+              child: Icon(Icons.event_repeat_rounded, size: 14, color: AppColors.inkFaint),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -155,12 +156,12 @@ class _GroupListBody extends StatelessWidget {
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text('$count件', style: AppTheme.mono(11, color: AppColors.inkSoft)),
-              Text('$minutes分', style: AppTheme.mono(11, color: AppColors.inkFaint)),
+              Text(formatMinutes(minutes), style: AppTheme.mono(11, color: AppColors.inkFaint)),
             ]),
             const SizedBox(width: 4),
             Pressable(
               onTap: () => showGroupEditSheet(context, g.name),
-              child: Container(width: 30, height: 30, alignment: Alignment.center, child: const Icon(Icons.edit_outlined, size: 13, color: AppColors.inkFaint)),
+              child: Container(width: 30, height: 30, alignment: Alignment.center, child: Icon(Icons.edit_outlined, size: 13, color: AppColors.inkFaint)),
             ),
           ]),
         ),

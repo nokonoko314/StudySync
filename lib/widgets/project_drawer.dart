@@ -32,7 +32,7 @@ class ProjectDrawer extends StatelessWidget {
                   style: AppTheme.body(11.5, color: AppColors.inkSoft)),
             ]),
           ),
-          const Divider(height: 1, color: AppColors.line),
+          Divider(height: 1, color: AppColors.line),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -65,7 +65,7 @@ class ProjectDrawer extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       decoration: BoxDecoration(color: AppColors.indigoSoft, borderRadius: BorderRadius.circular(14)),
                       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        const Icon(Icons.add, size: 15, color: AppColors.indigo),
+                        Icon(Icons.add, size: 15, color: AppColors.indigo),
                         const SizedBox(width: 6),
                         Text('新しい教科', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.indigo)),
                       ]),
@@ -153,7 +153,7 @@ class ProjectDrawer extends StatelessWidget {
             showProjectsManagementSheet(context);
           },
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.arrow_forward_rounded, size: 12, color: AppColors.inkFaint),
+            Icon(Icons.arrow_forward_rounded, size: 12, color: AppColors.inkFaint),
             const SizedBox(width: 5),
             Text('プロジェクトを管理・振り返る', style: AppTheme.body(11.5, weight: FontWeight.w700, color: AppColors.inkFaint)),
           ]),
@@ -184,7 +184,7 @@ class ProjectDrawer extends StatelessWidget {
             color: active ? AppColors.indigoSoft : Colors.transparent,
             borderRadius: BorderRadius.circular(13)),
         child: Row(children: [
-          const Icon(Icons.folder_outlined, size: 16, color: AppColors.inkSoft),
+          Icon(Icons.folder_outlined, size: 16, color: AppColors.inkSoft),
           const SizedBox(width: 10),
           Expanded(
               child: Text('すべてのタスク', style: AppTheme.body(14, weight: FontWeight.w700))),
@@ -229,7 +229,7 @@ class ProjectDrawer extends StatelessWidget {
             width: 34,
             height: 34,
             alignment: Alignment.center,
-            child: const Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
+            child: Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
           ),
         ),
       ]),

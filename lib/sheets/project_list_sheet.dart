@@ -41,7 +41,7 @@ class _SubjectsBody extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () => showProjectEditSheet(context, null),
-              icon: const Icon(Icons.add, size: 16, color: AppColors.indigo),
+              icon: Icon(Icons.add, size: 16, color: AppColors.indigo),
               label: Text('新しい教科を追加', style: AppTheme.body(13, weight: FontWeight.w700, color: AppColors.indigo)),
               style: OutlinedButton.styleFrom(
                   backgroundColor: AppColors.indigoSoft, side: BorderSide.none, padding: const EdgeInsets.symmetric(vertical: 13)),
@@ -83,7 +83,7 @@ class _SubjectsBody extends StatelessWidget {
               width: 34,
               height: 34,
               alignment: Alignment.center,
-              child: const Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
+              child: Icon(Icons.edit_outlined, size: 14, color: AppColors.inkFaint),
             ),
           ),
         ]),
