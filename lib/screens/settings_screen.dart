@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/app_settings.dart';
@@ -44,6 +45,20 @@ class SettingsScreen extends StatelessWidget {
         _group([
           _row(context, Icons.flag_outlined, AppColors.sageSoft, AppColors.sage, '週の目標時間', _weeklyGoalLabel(state.settings.weeklyGoalMinutes),
               () => showWeeklyGoalSheet(context)),
+        ]),
+        const SizedBox(height: 8),
+        _sectionLabel('タイマー'),
+        _group([
+          _toggleRow(
+            context,
+            Icons.battery_saver_outlined,
+            AppColors.surface2,
+            AppColors.inkSoft,
+            '計測中の省電力表示',
+            '黒背景に白い文字だけの表示にします（有機ELディスプレイの節電向け）',
+            state.settings.timerAmoledMode,
+            (v) => state.setTimerAmoledMode(v),
+          ),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('タスク'),
@@ -153,6 +168,23 @@ class SettingsScreen extends StatelessWidget {
           Icon(Icons.chevron_right, size: 16, color: AppColors.inkFaint),
         ]),
       ),
+    );
+  }
+
+  Widget _toggleRow(BuildContext context, IconData icon, Color bg, Color fg, String title, String sub, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+      child: Row(children: [
+        Container(width: 30, height: 30, decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(9)), child: Icon(icon, size: 15, color: fg)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: AppTheme.body(14, weight: FontWeight.w700)),
+            Text(sub, style: AppTheme.body(11.5, color: AppColors.inkSoft)),
+          ]),
+        ),
+        CupertinoSwitch(value: value, activeColor: AppColors.sage, onChanged: onChanged),
+      ]),
     );
   }
 }

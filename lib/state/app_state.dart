@@ -604,6 +604,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 計測中の省電力表示（黒背景・白文字のみ）のON/OFFを変更する。
+  void setTimerAmoledMode(bool enabled) {
+    settings.timerAmoledMode = enabled;
+    _persist();
+    notifyListeners();
+  }
+
   void resetNavOrder() {
     settings.navOrder = ['home', 'calendar', 'stats', 'settings'];
     _persist();

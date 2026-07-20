@@ -11,6 +11,9 @@ import '../widgets/pressable.dart';
 ///
 /// ここを閉じて他の画面に移動しても、計測は裏側（AppState）で続く。
 /// 下部にミニタイマーバーが表示され続け、タップすればまたここに戻れる。
+///
+/// 設定で「計測中の省電力表示」がONのときは、黒背景に白文字だけの
+/// シンプルな配色にする（有機ELディスプレイの節電のため）。
 class TimerFocusScreen extends StatefulWidget {
   final String taskId;
   const TimerFocusScreen({super.key, required this.taskId});
@@ -21,8 +24,6 @@ class TimerFocusScreen extends StatefulWidget {
 
 class _TimerFocusScreenState extends State<TimerFocusScreen> {
   Timer? _ticker;
-  int? _targetMinutes; // 案E：クイックプリセット（25分/50分/自由=null）
-  bool _autoStopped = false;
 
   @override
   void initState() {
@@ -32,9 +33,7 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
       state.startTimer(widget.taskId);
     }
     _ticker = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (!mounted) return;
-      _checkAutoStop();
-      setState(() {});
+      if (mounted) setState(() {});
     });
   }
 
@@ -42,32 +41,6 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
   void dispose() {
     _ticker?.cancel();
     super.dispose();
-  }
-
-  /// 目標時間（25分／50分）を設定しているとき、到達したら自動で停止・保存する。
-  void _checkAutoStop() {
-    final target = _targetMinutes;
-    if (target == null || _autoStopped) return;
-    final state = context.read<AppState>();
-    if (state.activeTimerTaskId != widget.taskId) return;
-    if (state.activeTimerElapsedSeconds >= target * 60) {
-      _autoStopped = true;
-      state.stopTimer();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('目標の$target分が経過したので停止しました'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.ink,
-        ));
-      }
-    }
-  }
-
-  void _selectTarget(int? minutes) {
-    setState(() {
-      _targetMinutes = minutes;
-      _autoStopped = false;
-    });
   }
 
   @override
@@ -78,9 +51,15 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
     final elapsed = running ? state.activeTimerElapsedSeconds : 0;
     final sessions = t == null ? <StudySession>[] : ([...t.sessions]..sort((a, b) => b.date.compareTo(a.date)));
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final amoled = state.settings.timerAmoledMode;
+
+    final bg = amoled ? Colors.black : AppColors.bg;
+    final fg = amoled ? Colors.white : AppColors.ink;
+    final fgSoft = amoled ? Colors.white70 : AppColors.inkSoft;
+    final fgFaint = amoled ? Colors.white38 : AppColors.inkFaint;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: bg,
       body: SafeArea(
         child: Column(children: [
           Padding(
@@ -92,7 +71,7 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
                   width: 40,
                   height: 40,
                   alignment: Alignment.center,
-                  child: Icon(Icons.keyboard_arrow_down_rounded, size: 26, color: AppColors.inkSoft),
+                  child: Icon(Icons.keyboard_arrow_down_rounded, size: 26, color: fgSoft),
                 ),
               ),
               const Spacer(),
@@ -100,8 +79,8 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
           ),
           Expanded(
             child: isLandscape
-                ? _landscapeBody(state, t, running, elapsed, sessions)
-                : _portraitBody(state, t, running, elapsed, sessions),
+                ? _landscapeBody(state, t, running, elapsed, sessions, amoled, fg, fgSoft, fgFaint)
+                : _portraitBody(state, t, running, elapsed, sessions, amoled, fg, fgSoft, fgFaint),
           ),
         ]),
       ),
@@ -109,134 +88,110 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
   }
 
   // ── 縦画面：これまで通りの1カラム表示 ──────────────────────────
-  Widget _portraitBody(AppState state, Task? t, bool running, int elapsed, List<StudySession> sessions) {
+  Widget _portraitBody(AppState state, Task? t, bool running, int elapsed, List<StudySession> sessions, bool amoled, Color fg, Color fgSoft, Color fgFaint) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(children: [
         const SizedBox(height: 10),
-        _taskTitle(t),
+        _taskTitle(t, fgSoft),
         const SizedBox(height: 10),
-        _clock(elapsed, size: 58),
+        _clock(elapsed, size: 58, color: fg),
         const SizedBox(height: 6),
-        _statusText(running),
-        const SizedBox(height: 16),
-        _presetSelector(),
-        const SizedBox(height: 20),
-        _controls(state, t, running),
+        _statusText(running, fgFaint),
+        const SizedBox(height: 28),
+        _controls(state, t, running, amoled, fg),
         const SizedBox(height: 32),
-        Align(alignment: Alignment.centerLeft, child: _historyLabel()),
+        Align(alignment: Alignment.centerLeft, child: _historyLabel(fgSoft)),
         const SizedBox(height: 8),
-        _historyList(state, t, sessions),
+        _historyList(state, t, sessions, fg, fgSoft, fgFaint),
       ]),
     );
   }
 
-  // ── 横画面：円形の進捗リングつきタイマーを左に、記録一覧を右に ──────
-  // 縦画面のレイアウトをそのまま横に伸ばすと余白ばかりで物足りないため、
-  // 2カラムに分けて画面全体を活かすレイアウトにしている。
-  Widget _landscapeBody(AppState state, Task? t, bool running, int elapsed, List<StudySession> sessions) {
-    return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Expanded(
-        flex: 6,
-        child: Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            _taskTitle(t),
-            const SizedBox(height: 14),
-            _ringedClock(elapsed),
-            const SizedBox(height: 10),
-            _statusText(running),
-            const SizedBox(height: 14),
-            _presetSelector(),
-            const SizedBox(height: 20),
-            _controls(state, t, running),
-          ]),
+  // ── 横画面：大きなデジタル時計を画面いっぱいに表示 ──────────────
+  // 縦画面をそのまま伸ばすと余白ばかりで物足りなかったため、
+  // 数字を大きく伸ばして横画面らしい「置き時計」のような見た目にした。
+  // 記録一覧は「記録を見る」からポップアップで確認できる。
+  Widget _landscapeBody(AppState state, Task? t, bool running, int elapsed, List<StudySession> sessions, bool amoled, Color fg, Color fgSoft, Color fgFaint) {
+    return Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        _taskTitle(t, fgSoft),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: _clock(elapsed, size: 108, color: fg),
         ),
-      ),
-      VerticalDivider(width: 1, color: AppColors.line),
-      Expanded(
-        flex: 5,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 24, 20),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _historyLabel(),
-            const SizedBox(height: 10),
-            _historyList(state, t, sessions),
-          ]),
+        const SizedBox(height: 8),
+        _statusText(running, fgFaint),
+        const SizedBox(height: 22),
+        _controls(state, t, running, amoled, fg),
+        const SizedBox(height: 18),
+        Pressable(
+          onTap: () => _showHistoryDialog(context, state, t, sessions, amoled, fg, fgSoft, fgFaint),
+          child: Text('記録を見る（${sessions.length}件）', style: AppTheme.body(12, weight: FontWeight.w700, color: fgFaint)),
         ),
-      ),
-    ]);
-  }
-
-  /// 案E：25分／50分のプリセット、または「自由」（時間を決めない、これまで通り）。
-  Widget _presetSelector() {
-    Widget chip(String label, int? minutes) {
-      final active = _targetMinutes == minutes;
-      return Pressable(
-        onTap: () => _selectTarget(minutes),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          decoration: BoxDecoration(
-            color: active ? AppColors.indigo : AppColors.surface2,
-            borderRadius: BorderRadius.circular(99),
-          ),
-          child: Text(label, style: AppTheme.body(12, weight: FontWeight.w700, color: active ? Colors.white : AppColors.inkSoft)),
-        ),
-      );
-    }
-
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      chip('25分', 25),
-      chip('50分', 50),
-      chip('自由', null),
-    ]);
-  }
-
-  Widget _taskTitle(Task? t) =>
-      Text(t?.title ?? '', textAlign: TextAlign.center, style: AppTheme.body(14, weight: FontWeight.w700, color: AppColors.inkSoft));
-
-  Widget _clock(int elapsed, {required double size}) => Text(formatHMS(elapsed), style: AppTheme.mono(size, color: AppColors.ink));
-
-  /// 横画面用：時計の周りの円弧で進み具合を見せる。
-  /// 目標時間（25分／50分）を選んでいればその目標に対する進捗、
-  /// 「自由」のときはこれまで通り「今の分の中の秒」の動きを表示する。
-  Widget _ringedClock(int elapsed) {
-    final target = _targetMinutes;
-    final ratio = target != null ? (elapsed / (target * 60)).clamp(0.0, 1.0) : (elapsed % 60) / 60;
-    return SizedBox(
-      width: 220,
-      height: 220,
-      child: Stack(alignment: Alignment.center, children: [
-        SizedBox(
-          width: 220,
-          height: 220,
-          child: CircularProgressIndicator(
-            value: ratio,
-            strokeWidth: 4,
-            backgroundColor: AppColors.line,
-            valueColor: AlwaysStoppedAnimation(AppColors.indigo),
-          ),
-        ),
-        Text(formatHMS(elapsed), style: AppTheme.mono(38, color: AppColors.ink)),
       ]),
     );
   }
 
-  Widget _statusText(bool running) => Text(
+  void _showHistoryDialog(
+    BuildContext context,
+    AppState state,
+    Task? t,
+    List<StudySession> sessions,
+    bool amoled,
+    Color fg,
+    Color fgSoft,
+    Color fgFaint,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: amoled ? const Color(0xFF111111) : AppColors.surface,
+        title: Text('これまでの記録', style: TextStyle(color: fg)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: _historyList(state, t, sessions, fg, fgSoft, fgFaint),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('閉じる', style: TextStyle(color: fgSoft))),
+        ],
+      ),
+    );
+  }
+
+  Widget _taskTitle(Task? t, Color color) =>
+      Text(t?.title ?? '', textAlign: TextAlign.center, style: AppTheme.body(14, weight: FontWeight.w700, color: color));
+
+  Widget _clock(int elapsed, {required double size, required Color color}) =>
+      Text(formatHMS(elapsed), style: AppTheme.mono(size, color: color));
+
+  Widget _statusText(bool running, Color color) => Text(
         running ? 'この画面を閉じても、バックグラウンドで計測は続きます' : '停止中',
         textAlign: TextAlign.center,
-        style: AppTheme.body(11.5, color: AppColors.inkFaint),
+        style: AppTheme.body(11.5, color: color),
       );
 
-  Widget _controls(AppState state, Task? t, bool running) {
+  Widget _controls(AppState state, Task? t, bool running, bool amoled, Color fg) {
+    // 省電力表示のときは、塗りつぶしの色面をなるべく作らないよう
+    // 白い枠線だけのボタンにする（黒背景を保ったまま操作できるように）。
+    final stopDecoration = amoled
+        ? BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white38, width: 1.5))
+        : BoxDecoration(color: AppColors.surface, shape: BoxShape.circle, boxShadow: AppColors.cardShadow);
+    final playDecoration = amoled
+        ? BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5))
+        : BoxDecoration(color: AppColors.indigo, shape: BoxShape.circle);
+
     return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
       Pressable(
         onTap: () => setState(() => state.stopTimer()),
         child: Container(
           width: 72,
           height: 72,
-          decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle, boxShadow: AppColors.cardShadow),
-          child: Icon(Icons.stop_rounded, color: AppColors.ink, size: 26),
+          decoration: stopDecoration,
+          child: Icon(Icons.stop_rounded, color: fg, size: 26),
         ),
       ),
       const SizedBox(width: 20),
@@ -251,18 +206,18 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
         child: Container(
           width: 72,
           height: 72,
-          decoration: BoxDecoration(color: AppColors.indigo, shape: BoxShape.circle),
+          decoration: playDecoration,
           child: Icon(running ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 30),
         ),
       ),
     ]);
   }
 
-  Widget _historyLabel() => Text('これまでの記録', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft));
+  Widget _historyLabel(Color color) => Text('これまでの記録', style: AppTheme.body(12, weight: FontWeight.w700, color: color));
 
-  Widget _historyList(AppState state, Task? t, List<StudySession> sessions) {
+  Widget _historyList(AppState state, Task? t, List<StudySession> sessions, Color fg, Color fgSoft, Color fgFaint) {
     if (sessions.isEmpty) {
-      return Text('まだ記録がありません', style: AppTheme.body(12, color: AppColors.inkFaint));
+      return Text('まだ記録がありません', style: AppTheme.body(12, color: fgFaint));
     }
     return Column(
       children: sessions.take(10).map<Widget>((s) {
@@ -270,9 +225,9 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text('${s.date.month}/${s.date.day} ${pad2(s.date.hour)}:${pad2(s.date.minute)}',
-                style: AppTheme.body(12, color: AppColors.inkSoft)),
+                style: AppTheme.body(12, color: fgSoft)),
             Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(formatDuration(s.durationSeconds), style: AppTheme.mono(12, weight: FontWeight.w700)),
+              Text(formatDuration(s.durationSeconds), style: AppTheme.mono(12, weight: FontWeight.w700, color: fg)),
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: () async {
@@ -293,7 +248,7 @@ class _TimerFocusScreenState extends State<TimerFocusScreen> {
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(2),
-                  child: Icon(Icons.close, size: 14, color: AppColors.inkFaint),
+                  child: Icon(Icons.close, size: 14, color: fgFaint),
                 ),
               ),
             ]),

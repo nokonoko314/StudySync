@@ -890,9 +890,38 @@ void showWeeklyGoalSheet(BuildContext context) {
   showAppSheet(context, title: '週の目標時間', bodyBuilder: (ctx) => const _WeeklyGoalBody());
 }
 
-class _WeeklyGoalBody extends StatelessWidget {
+class _WeeklyGoalBody extends StatefulWidget {
   const _WeeklyGoalBody();
-  static const _presetsMinutes = [0, 180, 300, 420, 600, 900];
+  @override
+  State<_WeeklyGoalBody> createState() => _WeeklyGoalBodyState();
+}
+
+class _WeeklyGoalBodyState extends State<_WeeklyGoalBody> {
+  late final TextEditingController _hoursCtrl;
+  late final TextEditingController _minutesCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final current = context.read<AppState>().settings.weeklyGoalMinutes;
+    _hoursCtrl = TextEditingController(text: (current ~/ 60).toString());
+    _minutesCtrl = TextEditingController(text: (current % 60).toString());
+  }
+
+  @override
+  void dispose() {
+    _hoursCtrl.dispose();
+    _minutesCtrl.dispose();
+    super.dispose();
+  }
+
+  void _apply() {
+    final h = int.tryParse(_hoursCtrl.text) ?? 0;
+    final m = int.tryParse(_minutesCtrl.text) ?? 0;
+    final total = (h.clamp(0, 999) * 60 + m.clamp(0, 59)).clamp(0, 999 * 60);
+    context.read<AppState>().setWeeklyGoalMinutes(total);
+    FocusScope.of(context).unfocus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -907,29 +936,75 @@ class _WeeklyGoalBody extends StatelessWidget {
           children: [
             Text('1週間の学習時間の目標を決めておくと、統計「まとめ」タブに進み具合が表示されます。', style: AppTheme.body(12.5, color: AppColors.inkSoft)),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _presetsMinutes.map((m) {
-                final active = current == m;
-                final label = m == 0 ? '設定しない' : formatMinutes(m);
-                return Pressable(
-                  onTap: () => state.setWeeklyGoalMinutes(m),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: active ? AppColors.indigo : AppColors.surface2,
-                      borderRadius: BorderRadius.circular(99),
-                      border: Border.all(color: active ? AppColors.indigo : AppColors.line),
-                    ),
-                    child: Text(label, style: AppTheme.body(12.5, weight: FontWeight.w700, color: active ? Colors.white : AppColors.inkSoft)),
-                  ),
-                );
-              }).toList(),
+            Row(children: [
+              Expanded(
+                child: _numberField(controller: _hoursCtrl, label: '時間'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _numberField(controller: _minutesCtrl, label: '分'),
+              ),
+            ]),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _apply,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.indigo,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text('設定する', style: AppTheme.body(14, weight: FontWeight.w700)),
+              ),
             ),
+            const SizedBox(height: 10),
+            Center(
+              child: Text(
+                current == 0 ? '現在：設定なし' : '現在：${formatMinutes(current)}',
+                style: AppTheme.body(11.5, color: AppColors.inkFaint),
+              ),
+            ),
+            if (current != 0) ...[
+              const SizedBox(height: 6),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    state.setWeeklyGoalMinutes(0);
+                    setState(() {
+                      _hoursCtrl.text = '0';
+                      _minutesCtrl.text = '0';
+                    });
+                  },
+                  child: Text('目標をやめる', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.coral)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Widget _numberField({required TextEditingController controller, required String label}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: AppTheme.body(11, weight: FontWeight.w700, color: AppColors.inkFaint)),
+      const SizedBox(height: 5),
+      TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        style: AppTheme.mono(18, color: AppColors.ink),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: AppColors.surface2,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.line, width: 1.5)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.line, width: 1.5)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.indigo, width: 1.5)),
+        ),
+      ),
+    ]);
   }
 }

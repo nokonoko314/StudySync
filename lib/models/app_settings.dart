@@ -33,6 +33,7 @@ class AppSettings {
   bool durationUseHourMinute; // 学習時間の表示形式。true: 「1時間10分」／false: 「70分」
   AppThemeMode themeMode; // ダークモードの設定
   int weeklyGoalMinutes; // 週の学習時間の目標（分）。0＝未設定
+  bool timerAmoledMode; // 計測中の省電力表示（黒背景・白文字のみ）
 
   AppSettings({
     this.fontScale = 1.0,
@@ -61,6 +62,7 @@ class AppSettings {
     this.durationUseHourMinute = true,
     this.themeMode = AppThemeMode.system,
     this.weeklyGoalMinutes = 0,
+    this.timerAmoledMode = false,
   })  : navOrder = navOrder ?? ['home', 'calendar', 'stats', 'settings'],
         globalIntervals = globalIntervals ?? [1, 3, 7, 14, 30],
         knownGroups = knownGroups ?? [],
@@ -93,6 +95,7 @@ class AppSettings {
         'durationUseHourMinute': durationUseHourMinute,
         'themeMode': themeMode.index,
         'weeklyGoalMinutes': weeklyGoalMinutes,
+        'timerAmoledMode': timerAmoledMode,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -126,6 +129,7 @@ class AppSettings {
         durationUseHourMinute: json['durationUseHourMinute'] as bool? ?? true,
         themeMode: AppThemeMode.values[json['themeMode'] as int? ?? 0],
         weeklyGoalMinutes: json['weeklyGoalMinutes'] as int? ?? 0,
+        timerAmoledMode: json['timerAmoledMode'] as bool? ?? false,
       );
 }
 
