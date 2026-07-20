@@ -10,6 +10,7 @@ import '../sheets/settings_sheets.dart';
 import '../sheets/project_list_sheet.dart';
 import '../sheets/group_management_sheet.dart';
 import '../sheets/changelog_sheet.dart';
+import '../sheets/bulk_auto_review_sheet.dart';
 import '../widgets/pressable.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -45,6 +46,8 @@ class SettingsScreen extends StatelessWidget {
         _group([
           _row(context, Icons.flag_outlined, AppColors.sageSoft, AppColors.sage, '週の目標時間', _weeklyGoalLabel(state.settings.weeklyGoalMinutes),
               () => showWeeklyGoalSheet(context)),
+          _row(context, Icons.view_timeline_outlined, AppColors.indigoSoft, AppColors.indigo, '日別タイムラインの目盛り', '${state.settings.timelineIntervalMinutes}分ごと',
+              () => showTimelineIntervalSheet(context)),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('タイマー'),
@@ -88,6 +91,7 @@ class SettingsScreen extends StatelessWidget {
         _sectionLabel('忘却曲線'),
         _group([
           _row(context, Icons.show_chart, AppColors.indigoSoft, AppColors.indigo, '復習スケジュールの手動設定', '自動追加のON/OFFと間隔を編集', () => showCurveSettingsSheet(context)),
+          _row(context, Icons.playlist_remove, AppColors.coralSoft, AppColors.coral, 'タスクを選んでまとめてOFF', '作成済みタスクの自動復習をまとめて解除', () => showBulkAutoReviewSheet(context)),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('連携'),

@@ -1008,3 +1008,59 @@ class _WeeklyGoalBodyState extends State<_WeeklyGoalBody> {
     ]);
   }
 }
+
+// ── 統計「日別」タイムラインの目盛り ─────────────────────────
+
+void showTimelineIntervalSheet(BuildContext context) {
+  showAppSheet(context, title: 'タイムラインの目盛り', bodyBuilder: (ctx) => const _TimelineIntervalBody());
+}
+
+class _TimelineIntervalBody extends StatelessWidget {
+  const _TimelineIntervalBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('統計「日別」タブのタイムラインの目盛りの細かさを選べます。細かくすると、記録が詰まっている日でも間隔が広がって見やすくなります。',
+                style: AppTheme.body(12.5, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            _option(state, 60, '60分ごと', '標準の間隔'),
+            const SizedBox(height: 10),
+            _option(state, 30, '30分ごと', '記録が多い日はこちらがおすすめ'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _option(AppState state, int minutes, String title, String sub) {
+    final active = state.settings.timelineIntervalMinutes == minutes;
+    return Pressable(
+      onTap: () => state.setTimelineIntervalMinutes(minutes),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: active ? AppColors.indigoSoft : AppColors.surface2,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: active ? AppColors.indigo : AppColors.line, width: 1.5),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: AppTheme.body(13.5, weight: FontWeight.w700, color: active ? AppColors.indigo : AppColors.ink)),
+              Text(sub, style: AppTheme.body(11, color: AppColors.inkSoft)),
+            ]),
+          ),
+          if (active) Icon(Icons.check_circle, size: 20, color: AppColors.indigo),
+        ]),
+      ),
+    );
+  }
+}

@@ -327,6 +327,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 選択した複数のタスクについて、忘却曲線にもとづく自動復習をまとめてOFFにする。
+  /// すでに生成されている復習タスクのうち、まだ完了していないものは
+  /// （今後追加してほしくない、という意図に合わせて）一緒に削除する。
+  /// 完了済みの復習タスクは、記録として残すためそのままにする。
+  void bulkDisableAutoReview(Iterable<String> taskIds) {
+    for (final id in taskIds) {
+      final t = taskById(id);
+      if (t == null || t.isReview) continue;
+      t.autoReview = false;
+      final undoneReviewIds =
+          tasks.where((c) => c.parentId == id && c.isReview && !c.completed).map((c) => c.id).toList();
+      for (final childId in undoneReviewIds) {
+        NotificationService.cancelForTask(childId).catchError((_) {});
+      }
+      tasks.removeWhere((c) => undoneReviewIds.contains(c.id));
+    }
+    _persist();
+    notifyListeners();
+  }
+
   Task? taskById(String id) {
     for (final t in tasks) {
       if (t.id == id) return t;
@@ -607,6 +627,13 @@ class AppState extends ChangeNotifier {
   /// 計測中の省電力表示（黒背景・白文字のみ）のON/OFFを変更する。
   void setTimerAmoledMode(bool enabled) {
     settings.timerAmoledMode = enabled;
+    _persist();
+    notifyListeners();
+  }
+
+  /// 統計「日別」タイムラインの目盛りの細かさ（30分／60分）を変更する。
+  void setTimelineIntervalMinutes(int minutes) {
+    settings.timelineIntervalMinutes = minutes;
     _persist();
     notifyListeners();
   }

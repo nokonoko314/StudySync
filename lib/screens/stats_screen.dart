@@ -27,6 +27,15 @@ class _Segment {
   });
 }
 
+/// タイムライン表示用：同じ時間帯に重なるセッションを横に並べるための
+/// レイアウト情報（何列目に置くか／その重なりグループの列数）。
+class _LaidOutSegment {
+  final _Segment seg;
+  final int col;
+  final int totalCols;
+  _LaidOutSegment(this.seg, this.col, this.totalCols);
+}
+
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
   @override
@@ -388,11 +397,66 @@ class _StatsScreenState extends State<StatsScreen> {
 
   /// 「日別」タブの中身：00:00〜24:00を1時間ごとの目盛りで表示し、
   /// 何時に何を勉強していたかを一目で見られるタイムライン表示。
+  /// 同じ時間帯に重なっているセッションを検出し、横に並べて表示できるよう
+  /// 列（column）を割り当てる。重なっているもの同士をひとまとまり（クラスタ）
+  /// にし、クラスタの中で貪欲法により列を決める（カレンダーアプリの
+  /// 日表示でよく使われる方法）。
+  List<_LaidOutSegment> _layoutSegments(List<_Segment> segments) {
+    final sorted = [...segments]..sort((a, b) => a.start.compareTo(b.start));
+    final result = <_LaidOutSegment>[];
+
+    List<_Segment> cluster = [];
+    DateTime? clusterEnd;
+
+    void flushCluster() {
+      if (cluster.isEmpty) return;
+      final columnsEnd = <DateTime>[];
+      final colOf = <_Segment, int>{};
+      for (final s in cluster) {
+        var placed = -1;
+        for (var c = 0; c < columnsEnd.length; c++) {
+          if (!s.start.isBefore(columnsEnd[c])) {
+            placed = c;
+            break;
+          }
+        }
+        if (placed == -1) {
+          placed = columnsEnd.length;
+          columnsEnd.add(s.end);
+        } else {
+          columnsEnd[placed] = s.end;
+        }
+        colOf[s] = placed;
+      }
+      final totalCols = columnsEnd.length;
+      for (final s in cluster) {
+        result.add(_LaidOutSegment(s, colOf[s]!, totalCols));
+      }
+      cluster = [];
+      clusterEnd = null;
+    }
+
+    for (final s in sorted) {
+      if (cluster.isEmpty || s.start.isBefore(clusterEnd!)) {
+        cluster.add(s);
+        if (clusterEnd == null || s.end.isAfter(clusterEnd!)) clusterEnd = s.end;
+      } else {
+        flushCluster();
+        cluster.add(s);
+        clusterEnd = s.end;
+      }
+    }
+    flushCluster();
+    return result;
+  }
+
   Widget _dayTimelineView(AppState state) {
     final segments = _daySegments(state, _timelineDate);
     const labelWidth = 42.0;
-    const pxPerMinute = 0.62; // 1時間=約37px。24時間ぶんが1ページ弱に収まる高さ。
-    const totalHeight = 24 * 60 * pxPerMinute;
+    final interval = state.settings.timelineIntervalMinutes; // 30 or 60
+    final pxPerMinute = interval == 30 ? 1.05 : 0.62; // 30分刻みのときは間隔を広げて見やすくする
+    final totalHeight = 24 * 60 * pxPerMinute;
+    final rowCount = (24 * 60) ~/ interval;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -419,49 +483,67 @@ class _StatsScreenState extends State<StatsScreen> {
           ),
         SizedBox(
           height: totalHeight,
-          child: Stack(children: [
-            // 1時間ごとの目盛り線とラベル
-            for (var h = 0; h < 24; h++)
-              Positioned(
-                top: h * 60 * pxPerMinute,
-                left: 0,
-                right: 0,
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  SizedBox(
-                    width: labelWidth,
-                    child: Transform.translate(
-                      offset: const Offset(0, -6),
-                      child: Text('${pad2(h)}:00', style: AppTheme.mono(9, weight: FontWeight.w700, color: AppColors.inkFaint)),
+          child: LayoutBuilder(builder: (context, constraints) {
+            final laidOut = _layoutSegments(segments);
+            return Stack(children: [
+              // 目盛り線とラベル（30分または60分ごと）
+              for (var i = 0; i < rowCount; i++)
+                Positioned(
+                  top: i * interval * pxPerMinute,
+                  left: 0,
+                  right: 0,
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    SizedBox(
+                      width: labelWidth,
+                      child: Transform.translate(
+                        offset: const Offset(0, -6),
+                        child: Text(
+                          '${pad2((i * interval) ~/ 60)}:${pad2((i * interval) % 60)}',
+                          style: AppTheme.mono(9, weight: FontWeight.w700, color: AppColors.inkFaint),
+                        ),
+                      ),
                     ),
-                  ),
-                  Expanded(child: Container(height: 1, color: AppColors.line)),
-                ]),
-              ),
-            // 学習セッションのブロック
-            for (final seg in segments) _segmentBlock(seg, _timelineDate, labelWidth, pxPerMinute),
-          ]),
+                    Expanded(
+                      child: Container(height: 1, color: (i * interval) % 60 == 0 ? AppColors.line : AppColors.line.withOpacity(.45)),
+                    ),
+                  ]),
+                ),
+              // 学習セッションのブロック（重なる場合は横に並べる）
+              for (final item in laidOut) _segmentBlock(item, _timelineDate, labelWidth, pxPerMinute, constraints.maxWidth),
+            ]);
+          }),
         ),
       ],
     );
   }
 
-  Widget _segmentBlock(_Segment seg, DateTime day, double labelWidth, double pxPerMinute) {
+  Widget _segmentBlock(_LaidOutSegment item, DateTime day, double labelWidth, double pxPerMinute, double maxWidth) {
+    final seg = item.seg;
     final dayStart = DateTime(day.year, day.month, day.day);
     final startMin = seg.start.difference(dayStart).inMinutes.clamp(0, 24 * 60).toDouble();
     final endMin = seg.end.difference(dayStart).inMinutes.clamp(0, 24 * 60).toDouble();
     final top = startMin * pxPerMinute;
     final height = ((endMin - startMin) * pxPerMinute).clamp(10.0, double.infinity).toDouble();
     final color = seg.project?.color ?? AppColors.inkFaint;
-    final showText = height >= 16;
+
+    // 重なっているセッションがある場合は、列数に応じて横幅を分割する。
+    const rightPad = 4.0;
+    const gap = 3.0;
+    final trackLeft = labelWidth + 6;
+    final trackWidth = (maxWidth - trackLeft - rightPad).clamp(0.0, double.infinity);
+    final colWidth = item.totalCols > 0 ? (trackWidth - gap * (item.totalCols - 1)) / item.totalCols : trackWidth;
+    final left = trackLeft + item.col * (colWidth + gap);
+    final showText = height >= 16 && colWidth >= 40;
+
     return Positioned(
       top: top,
-      left: labelWidth + 6,
-      right: 4,
+      left: left,
+      width: colWidth.clamp(0.0, double.infinity),
       height: height,
       child: Pressable(
         onTap: () => _editSessionDialog(seg),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: showText ? 2 : 0),
+          padding: EdgeInsets.symmetric(horizontal: showText ? 8 : 3, vertical: showText ? 2 : 0),
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(
             color: color.withOpacity(.85),

@@ -34,6 +34,7 @@ class AppSettings {
   AppThemeMode themeMode; // ダークモードの設定
   int weeklyGoalMinutes; // 週の学習時間の目標（分）。0＝未設定
   bool timerAmoledMode; // 計測中の省電力表示（黒背景・白文字のみ）
+  int timelineIntervalMinutes; // 統計「日別」タイムラインの目盛りの細かさ（30 or 60）
 
   AppSettings({
     this.fontScale = 1.0,
@@ -63,6 +64,7 @@ class AppSettings {
     this.themeMode = AppThemeMode.system,
     this.weeklyGoalMinutes = 0,
     this.timerAmoledMode = false,
+    this.timelineIntervalMinutes = 60,
   })  : navOrder = navOrder ?? ['home', 'calendar', 'stats', 'settings'],
         globalIntervals = globalIntervals ?? [1, 3, 7, 14, 30],
         knownGroups = knownGroups ?? [],
@@ -96,6 +98,7 @@ class AppSettings {
         'themeMode': themeMode.index,
         'weeklyGoalMinutes': weeklyGoalMinutes,
         'timerAmoledMode': timerAmoledMode,
+        'timelineIntervalMinutes': timelineIntervalMinutes,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -130,6 +133,7 @@ class AppSettings {
         themeMode: AppThemeMode.values[json['themeMode'] as int? ?? 0],
         weeklyGoalMinutes: json['weeklyGoalMinutes'] as int? ?? 0,
         timerAmoledMode: json['timerAmoledMode'] as bool? ?? false,
+        timelineIntervalMinutes: json['timelineIntervalMinutes'] as int? ?? 60,
       );
 }
 
