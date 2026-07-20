@@ -406,6 +406,10 @@ class AppState extends ChangeNotifier {
   DateTime? get activeTimerStartedAt =>
       settings.activeTimerStartedAtMs != null ? DateTime.fromMillisecondsSinceEpoch(settings.activeTimerStartedAtMs!) : null;
 
+  /// 今、休憩中（一時停止中）かどうか。
+  bool get isTimerPaused => settings.activeTimerTaskId != null && settings.activeTimerBreakStartedAtMs != null;
+
+  /// 現在の学習区間（一時停止してからは0）の経過秒数。
   int get activeTimerElapsedSeconds {
     final started = activeTimerStartedAt;
     if (started == null) return 0;
@@ -413,30 +417,98 @@ class AppState extends ChangeNotifier {
     return diff < 0 ? 0 : diff;
   }
 
+  /// 休憩（一時停止）を始めてからの経過秒数。休憩中でなければ0。
+  int get activeTimerBreakElapsedSeconds {
+    final ms = settings.activeTimerBreakStartedAtMs;
+    if (ms == null) return 0;
+    final diff = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(ms)).inSeconds;
+    return diff < 0 ? 0 : diff;
+  }
+
+  /// 今回のタイマー実行中（開始してから「記録する」で終えるまで）の、
+  /// 学習していた時間の合計（一時停止で確定済みの分＋今の区間）。
+  int get activeTimerTotalStudySeconds => settings.activeTimerAccumulatedSeconds + activeTimerElapsedSeconds;
+
+  /// 表示用：そのタスクの「前回までの合計時間」から続けてカウントした場合の、
+  /// 画面に出す時計の値（前回までの合計＋今回計測した分）。
+  int get activeTimerDisplayTotalSeconds => settings.activeTimerBaselineSeconds + activeTimerTotalStudySeconds;
+
+  /// 計測画面の時計スタイル（スワイプで選ぶ）を変更する。
+  void setTimerStyleIndex(int index) {
+    settings.timerStyleIndex = index;
+    _persist();
+    notifyListeners();
+  }
+
+  /// 計測画面の時計の色を変更する（対応スタイルのみ）。nullで既定色に戻す。
+  void setTimerClockColor(Color? color) {
+    settings.timerClockColor = color?.value;
+    _persist();
+    notifyListeners();
+  }
+
   /// 指定したタスクの計測を開始する。既に別のタスクを計測中なら、
   /// そちらは先に確定保存してから切り替える。
+  /// そのタスクにこれまで記録されている合計時間を「続きから」表示できるよう、
+  /// 開始時点の合計を基準値（baseline）として覚えておく。
   void startTimer(String taskId) {
     if (settings.activeTimerTaskId != null && settings.activeTimerTaskId != taskId) {
       stopTimer();
     }
+    final t = taskById(taskId);
     settings.activeTimerTaskId = taskId;
+    settings.activeTimerStartedAtMs = DateTime.now().millisecondsSinceEpoch;
+    settings.activeTimerAccumulatedSeconds = 0;
+    settings.activeTimerBreakStartedAtMs = null;
+    settings.activeTimerBaselineSeconds = t?.timeSpent ?? 0;
+    _persist();
+    notifyListeners();
+  }
+
+  /// 一時停止する（＝休憩に切り替える）。ここまでの区間は学習記録として
+  /// 確定保存し、代わりに休憩の計測を始める。学習時間としてはカウントしない。
+  void pauseTimer() {
+    final taskId = settings.activeTimerTaskId;
+    if (taskId == null || settings.activeTimerStartedAtMs == null) return;
+    final seconds = activeTimerElapsedSeconds;
+    if (seconds > 0 && tasks.any((t) => t.id == taskId)) {
+      commitSession(taskId, seconds);
+      settings.activeTimerAccumulatedSeconds += seconds;
+    }
+    settings.activeTimerStartedAtMs = null;
+    settings.activeTimerBreakStartedAtMs = DateTime.now().millisecondsSinceEpoch;
+    _persist();
+    notifyListeners();
+  }
+
+  /// 休憩を終えて、学習の計測を再開する。
+  void resumeTimer() {
+    if (settings.activeTimerTaskId == null) return;
+    settings.activeTimerBreakStartedAtMs = null;
     settings.activeTimerStartedAtMs = DateTime.now().millisecondsSinceEpoch;
     _persist();
     notifyListeners();
   }
 
-  /// 計測中のタイマーを停止し、経過時間を学習記録として確定保存する。
-  void stopTimer() {
+  /// 「記録する」：計測を終え、ここまでの学習時間を確定保存してタイマーを閉じる。
+  /// 休憩中に押した場合は、休憩時間を保存せずそのまま終了する。
+  /// 戻り値は「今回の実行で新しく記録した秒数」（ポップアップ表示用）。
+  int stopTimer() {
     final taskId = settings.activeTimerTaskId;
     final seconds = activeTimerElapsedSeconds;
+    final recorded = activeTimerTotalStudySeconds;
     settings.activeTimerTaskId = null;
     settings.activeTimerStartedAtMs = null;
+    settings.activeTimerAccumulatedSeconds = 0;
+    settings.activeTimerBreakStartedAtMs = null;
+    settings.activeTimerBaselineSeconds = 0;
     if (taskId != null && seconds > 0 && tasks.any((t) => t.id == taskId)) {
       commitSession(taskId, seconds);
     } else {
       _persist();
       notifyListeners();
     }
+    return recorded;
   }
 
   /// タイマーを停止して記録を保存する（durationSeconds <= 0 のときは何もしない）。

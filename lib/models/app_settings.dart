@@ -30,6 +30,11 @@ class AppSettings {
   double calendarAgendaScale; // カレンダーの日別タスク表示の大きさ（0.9=小 / 1.0=標準 / 1.15=大）
   String? activeTimerTaskId; // 計測中のタスクID（バックグラウンドでも計測を続けるため保存しておく）
   int? activeTimerStartedAtMs; // 計測を開始した時刻（epoch ms）
+  int activeTimerAccumulatedSeconds; // 今回のタイマー実行中に、一時停止までに確定した学習時間の合計（秒）
+  int? activeTimerBreakStartedAtMs; // 休憩（一時停止）を始めた時刻（epoch ms）。休憩中でなければnull
+  int activeTimerBaselineSeconds; // タイマー開始時点でそのタスクにすでに記録されていた合計時間（秒）。続きから表示するため
+  int timerStyleIndex; // 計測画面の時計スタイル（スワイプで選ぶ、0が既定）
+  int? timerClockColor; // 時計の色（対応スタイルのみ、Color.value）。nullならスタイルの既定色
   bool durationUseHourMinute; // 学習時間の表示形式。true: 「1時間10分」／false: 「70分」
   AppThemeMode themeMode; // ダークモードの設定
   int weeklyGoalMinutes; // 週の学習時間の目標（分）。0＝未設定
@@ -60,6 +65,11 @@ class AppSettings {
     this.calendarAgendaScale = 1.0,
     this.activeTimerTaskId,
     this.activeTimerStartedAtMs,
+    this.activeTimerAccumulatedSeconds = 0,
+    this.activeTimerBreakStartedAtMs,
+    this.activeTimerBaselineSeconds = 0,
+    this.timerStyleIndex = 0,
+    this.timerClockColor,
     this.durationUseHourMinute = true,
     this.themeMode = AppThemeMode.system,
     this.weeklyGoalMinutes = 0,
@@ -94,6 +104,11 @@ class AppSettings {
         'calendarAgendaScale': calendarAgendaScale,
         'activeTimerTaskId': activeTimerTaskId,
         'activeTimerStartedAtMs': activeTimerStartedAtMs,
+        'activeTimerAccumulatedSeconds': activeTimerAccumulatedSeconds,
+        'activeTimerBreakStartedAtMs': activeTimerBreakStartedAtMs,
+        'activeTimerBaselineSeconds': activeTimerBaselineSeconds,
+        'timerStyleIndex': timerStyleIndex,
+        'timerClockColor': timerClockColor,
         'durationUseHourMinute': durationUseHourMinute,
         'themeMode': themeMode.index,
         'weeklyGoalMinutes': weeklyGoalMinutes,
@@ -129,6 +144,11 @@ class AppSettings {
         calendarAgendaScale: (json['calendarAgendaScale'] as num?)?.toDouble() ?? 1.0,
         activeTimerTaskId: json['activeTimerTaskId'] as String?,
         activeTimerStartedAtMs: json['activeTimerStartedAtMs'] as int?,
+        activeTimerAccumulatedSeconds: json['activeTimerAccumulatedSeconds'] as int? ?? 0,
+        activeTimerBreakStartedAtMs: json['activeTimerBreakStartedAtMs'] as int?,
+        activeTimerBaselineSeconds: json['activeTimerBaselineSeconds'] as int? ?? 0,
+        timerStyleIndex: json['timerStyleIndex'] as int? ?? 0,
+        timerClockColor: json['timerClockColor'] as int?,
         durationUseHourMinute: json['durationUseHourMinute'] as bool? ?? true,
         themeMode: AppThemeMode.values[json['themeMode'] as int? ?? 0],
         weeklyGoalMinutes: json['weeklyGoalMinutes'] as int? ?? 0,
