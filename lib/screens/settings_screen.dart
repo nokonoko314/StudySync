@@ -11,6 +11,7 @@ import '../sheets/project_list_sheet.dart';
 import '../sheets/group_management_sheet.dart';
 import '../sheets/changelog_sheet.dart';
 import '../sheets/bulk_auto_review_sheet.dart';
+import '../sheets/feedback_sheet.dart';
 import '../widgets/pressable.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -34,6 +35,8 @@ class SettingsScreen extends StatelessWidget {
               () => showThemeModeSheet(context)),
           _row(context, Icons.timer_outlined, AppColors.goldSoft, AppColors.gold, '学習時間の表記', _durationFormatLabel(state.settings.durationUseHourMinute),
               () => showDurationFormatSheet(context)),
+          _row(context, Icons.view_carousel_outlined, AppColors.coralSoft, AppColors.coral, 'ホームのタブ', _homeTabsLabel(state.visibleStatusFilters),
+              () => showHomeTabsSheet(context)),
         ]),
         const SizedBox(height: 8),
         _sectionLabel('カレンダー'),
@@ -100,6 +103,11 @@ class SettingsScreen extends StatelessWidget {
           _row(context, Icons.notifications_outlined, AppColors.goldSoft, AppColors.gold, '通知', state.settings.notifGranted ? '許可済み' : '未設定', () => showNotificationSheet(context)),
         ]),
         const SizedBox(height: 8),
+        _sectionLabel('サポート'),
+        _group([
+          _row(context, Icons.chat_bubble_outline_rounded, AppColors.indigoSoft, AppColors.indigo, 'ご要望・不具合報告', '開発者に直接送れます', () => showFeedbackSheet(context)),
+        ]),
+        const SizedBox(height: 8),
         _sectionLabel('アプリ情報'),
         _group([
           _row(context, Icons.info_outline, AppColors.surface2, AppColors.inkSoft, 'StudySync', '$kAppVersion・変更履歴を見る', () => showChangelogSheet(context)),
@@ -121,6 +129,8 @@ class SettingsScreen extends StatelessWidget {
       };
 
   String _weeklyGoalLabel(int minutes) => minutes == 0 ? '設定しない' : formatMinutes(minutes);
+
+  String _homeTabsLabel(List<StatusFilter> filters) => filters.map((f) => f.label).join('・');
 
   String _timeLabel(int h, int m) => '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
 

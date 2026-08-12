@@ -13,21 +13,22 @@ class AppColors {
   static Color inkFaint = _lightInkFaint;
   static Color line = _lightLine;
 
-  static const _lightBg = Color(0xFFF1F0F6);
+  // 「StudySync Calm」パレット：暖色のクリーム地に寄せて、Opal的な静けさを演出。
+  static const _lightBg = Color(0xFFFBF6EF);
   static const _lightSurface = Color(0xFFFFFFFF);
-  static const _lightSurface2 = Color(0xFFFAFAFC);
-  static const _lightInk = Color(0xFF1E1B2E);
-  static const _lightInkSoft = Color(0xFF5B5770);
-  static const _lightInkFaint = Color(0xFFA19DB3);
-  static const _lightLine = Color(0xFFE5E3EE);
+  static const _lightSurface2 = Color(0xFFF6F1E8);
+  static const _lightInk = Color(0xFF241F2E);
+  static const _lightInkSoft = Color(0xFF6E6678);
+  static const _lightInkFaint = Color(0xFFACA3B0);
+  static const _lightLine = Color(0xFFEAE1D3);
 
-  static const _darkBg = Color(0xFF17151F);
-  static const _darkSurface = Color(0xFF211E2C);
-  static const _darkSurface2 = Color(0xFF2A2636);
-  static const _darkInk = Color(0xFFF1F0F6);
-  static const _darkInkSoft = Color(0xFFB8B4C9);
-  static const _darkInkFaint = Color(0xFF6F6B80);
-  static const _darkLine = Color(0xFF383349);
+  static const _darkBg = Color(0xFF17141C);
+  static const _darkSurface = Color(0xFF221E2A);
+  static const _darkSurface2 = Color(0xFF272230);
+  static const _darkInk = Color(0xFFF3EFE9);
+  static const _darkInkSoft = Color(0xFFB4AABF);
+  static const _darkInkFaint = Color(0xFF6F6678);
+  static const _darkLine = Color(0xFF362F3D);
 
   static bool isDark = false;
 
@@ -43,17 +44,19 @@ class AppColors {
     line = dark ? _darkLine : _lightLine;
   }
 
-  // UIのメインカラー（設定で変更可能）。既定は元のインディゴ。
-  static Color indigo = const Color(0xFF423E99);
-  static Color indigoDeep = const Color(0xFF2C2A66);
-  static Color indigoSoft = const Color(0xFFE8E6F6);
+  // UIのメインカラー（設定で変更可能）。既定は落ち着いたラベンダー寄りの藍色。
+  static Color indigo = const Color(0xFF6E5AA0);
+  static Color indigoDeep = const Color(0xFF4E4074);
+  static Color indigoSoft = const Color(0xFFE9E3F5);
 
-  static const coral = Color(0xFFE2613B);
-  static const coralSoft = Color(0xFFFCE5DD);
-  static const sage = Color(0xFF4F8868);
-  static const sageSoft = Color(0xFFE2EFE8);
-  static const gold = Color(0xFFC9A227);
+  static const coral = Color(0xFFE2684A);
+  static const coralSoft = Color(0xFFFBE2DA);
+  static const sage = Color(0xFF5C9376);
+  static const sageSoft = Color(0xFFE3EFE6);
+  static const gold = Color(0xFFD2A24C);
   static const goldSoft = Color(0xFFF6EFD7);
+  static const peach = Color(0xFFF3A874);
+  static const peachSoft = Color(0xFFFBE4D2);
 
   static List<BoxShadow> get cardShadow => [
         BoxShadow(color: (isDark ? Colors.black : const Color(0xFF1E1B2E)).withOpacity(isDark ? 0.28 : 0.06), blurRadius: 2, offset: const Offset(0, 1)),

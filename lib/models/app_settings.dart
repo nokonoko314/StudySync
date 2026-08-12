@@ -40,6 +40,8 @@ class AppSettings {
   int weeklyGoalMinutes; // 週の学習時間の目標（分）。0＝未設定
   bool timerAmoledMode; // 計測中の省電力表示（黒背景・白文字のみ）
   int timelineIntervalMinutes; // 統計「日別」タイムラインの目盛りの細かさ（30 or 60）
+  List<String> visibleStatusFilters; // ホーム画面に表示するタブ（StatusFilterのname）。既定は未完了・完了のみ
+  bool sawSwipeHint; // タスクカードのスワイプ操作ヒントを表示済みか（初回のみアニメーションで見せる）
 
   AppSettings({
     this.fontScale = 1.0,
@@ -75,10 +77,13 @@ class AppSettings {
     this.weeklyGoalMinutes = 0,
     this.timerAmoledMode = false,
     this.timelineIntervalMinutes = 60,
+    List<String>? visibleStatusFilters,
+    this.sawSwipeHint = false,
   })  : navOrder = navOrder ?? ['home', 'calendar', 'stats', 'settings'],
         globalIntervals = globalIntervals ?? [1, 3, 7, 14, 30],
         knownGroups = knownGroups ?? [],
-        customWallpaperColors = customWallpaperColors ?? [];
+        customWallpaperColors = customWallpaperColors ?? [],
+        visibleStatusFilters = visibleStatusFilters ?? ['incomplete', 'completed'];
 
   Map<String, dynamic> toJson() => {
         'fontScale': fontScale,
@@ -114,6 +119,8 @@ class AppSettings {
         'weeklyGoalMinutes': weeklyGoalMinutes,
         'timerAmoledMode': timerAmoledMode,
         'timelineIntervalMinutes': timelineIntervalMinutes,
+        'visibleStatusFilters': visibleStatusFilters,
+        'sawSwipeHint': sawSwipeHint,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -154,6 +161,8 @@ class AppSettings {
         weeklyGoalMinutes: json['weeklyGoalMinutes'] as int? ?? 0,
         timerAmoledMode: json['timerAmoledMode'] as bool? ?? false,
         timelineIntervalMinutes: json['timelineIntervalMinutes'] as int? ?? 60,
+        visibleStatusFilters: (json['visibleStatusFilters'] as List?)?.map((e) => e as String).toList(),
+        sawSwipeHint: json['sawSwipeHint'] as bool? ?? false,
       );
 }
 

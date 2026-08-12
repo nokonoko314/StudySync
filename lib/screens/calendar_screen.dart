@@ -237,6 +237,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               ? _levelColor(timeLevel)
                               : (isToday ? AppColors.indigoSoft : Colors.transparent)),
                       borderRadius: BorderRadius.circular(13),
+                      // 「今日」は選択状態やモードに関わらず、常にリングで分かるようにする。
+                      border: isToday ? Border.all(color: isSelected ? Colors.white : AppColors.indigo, width: 2) : null,
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [

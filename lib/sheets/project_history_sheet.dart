@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../models/task.dart';
 import '../app_theme.dart';
 import '../utils/date_utils.dart';
 import '../widgets/sheet_scaffold.dart';
+import '../widgets/stats_charts.dart';
 
 /// 「プロジェクト」（期末テストなど）を振り返るための画面。
 /// タスク一覧ではなく、カレンダーのように「1日ごとの学習時間」を
@@ -26,6 +28,17 @@ class _ProjectHistoryBody extends StatelessWidget {
       }
     }
     return map;
+  }
+
+  /// このプロジェクトのタスクを教科ごとにまとめた、学習時間とタスク数。
+  List<HBarItem> _bySubject(AppState state, List<Task> tasks) {
+    final items = state.projects.map((p) {
+      final ts = tasks.where((t) => t.projectId == p.id);
+      final total = ts.fold<int>(0, (s, t) => s + t.timeSpent);
+      return HBarItem(p.name, p.color, (total / 60).round(), ts.length);
+    }).where((item) => item.taskCount > 0).toList();
+    items.sort((a, b) => b.minutes.compareTo(a.minutes));
+    return items;
   }
 
   @override
@@ -94,6 +107,17 @@ class _ProjectHistoryBody extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(child: _statCard('完了率', '$pct%')),
           ]),
+          if (tasks.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('教科別の内訳', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft)),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), boxShadow: AppColors.cardShadow),
+              child: HorizontalBarList(items: _bySubject(state, tasks)),
+            ),
+          ],
           const SizedBox(height: 20),
           Text('1日ごとの学習時間', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.inkSoft)),
           const SizedBox(height: 4),

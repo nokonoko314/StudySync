@@ -12,7 +12,8 @@ class HBarItem {
   final String name;
   final Color color;
   final int minutes;
-  HBarItem(this.name, this.color, this.minutes);
+  final int taskCount;
+  HBarItem(this.name, this.color, this.minutes, this.taskCount);
 }
 
 /// 日別／週別グラフ用の縦バーチャート。
@@ -96,9 +97,13 @@ class HorizontalBarList extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             SizedBox(
-              width: 56,
-              child: Text(formatDuration(item.minutes * 60),
-                  textAlign: TextAlign.right, style: AppTheme.mono(11, color: AppColors.inkSoft)),
+              width: 62,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(formatDuration(item.minutes * 60),
+                    textAlign: TextAlign.right, style: AppTheme.mono(11, color: AppColors.inkSoft)),
+                Text('${item.taskCount}件',
+                    textAlign: TextAlign.right, style: AppTheme.body(9.5, color: AppColors.inkFaint)),
+              ]),
             ),
           ]),
         );

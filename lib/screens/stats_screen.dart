@@ -8,7 +8,7 @@ import '../utils/date_utils.dart';
 import '../widgets/stats_charts.dart';
 import '../widgets/pressable.dart';
 
-enum _StatsView { summary, day, week, project, group }
+enum _StatsView { summary, day }
 
 class _Segment {
   final DateTime start;
@@ -51,7 +51,7 @@ class _StatsScreenState extends State<StatsScreen> {
     for (var i = daysBack - 1; i >= 0; i--) {
       final day = startOfDay(DateTime.now().subtract(Duration(days: i)));
       var total = 0;
-      for (final t in state.tasks) {
+      for (final t in state.scopedTasks) {
         for (final s in t.sessions) {
           if (sameDay(s.date, day)) total += s.durationSeconds;
         }
@@ -59,47 +59,6 @@ class _StatsScreenState extends State<StatsScreen> {
       out.add(ChartPoint(weekdayJp(day), (total / 60).round()));
     }
     return out;
-  }
-
-  List<ChartPoint> _weekly(AppState state, int weeksBack) {
-    final out = <ChartPoint>[];
-    final today = startOfDay(DateTime.now());
-    final thisMonday = today.subtract(Duration(days: (today.weekday + 6) % 7));
-    for (var w = weeksBack - 1; w >= 0; w--) {
-      final weekStart = thisMonday.subtract(Duration(days: w * 7));
-      final weekEnd = weekStart.add(const Duration(days: 7));
-      var total = 0;
-      for (final t in state.tasks) {
-        for (final s in t.sessions) {
-          if (!s.date.isBefore(weekStart) && s.date.isBefore(weekEnd)) total += s.durationSeconds;
-        }
-      }
-      out.add(ChartPoint('${weekStart.month}/${weekStart.day}週', (total / 60).round()));
-    }
-    return out;
-  }
-
-  List<HBarItem> _byProject(AppState state) {
-    final items = state.projects.map((p) {
-      final total = state.tasks.where((t) => t.projectId == p.id).fold<int>(0, (s, t) => s + t.timeSpent);
-      return HBarItem(p.name, p.color, (total / 60).round());
-    }).toList();
-    items.sort((a, b) => b.minutes.compareTo(a.minutes));
-    return items;
-  }
-
-  List<HBarItem> _byGroup(AppState state) {
-    final groups = state.settings.knownGroups;
-    final items = groups.map((g) {
-      final total = state.tasks.where((t) => t.group == g.name).fold<int>(0, (s, t) => s + t.timeSpent);
-      return HBarItem(g.name, AppColors.coral, (total / 60).round());
-    }).toList();
-    final untaggedTotal = state.tasks.where((t) => t.group == null).fold<int>(0, (s, t) => s + t.timeSpent);
-    if (untaggedTotal > 0) {
-      items.add(HBarItem('未分類', AppColors.inkFaint, (untaggedTotal / 60).round()));
-    }
-    items.sort((a, b) => b.minutes.compareTo(a.minutes));
-    return items;
   }
 
   /// 選択中の日に計測されたセッションを、その日の中の開始・終了時刻付きの
@@ -110,7 +69,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final dayStart = DateTime(day.year, day.month, day.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
     final segments = <_Segment>[];
-    for (final t in state.tasks) {
+    for (final t in state.scopedTasks) {
       final project = state.projectById(t.projectId);
       for (final s in t.sessions) {
         final end = s.date;
@@ -136,20 +95,24 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final totalMin = (state.tasks.fold<int>(0, (s, t) => s + t.timeSpent) / 60).round();
+    final totalMin = (state.scopedTasks.fold<int>(0, (s, t) => s + t.timeSpent) / 60).round();
     final weekMin = _daily(state, 7).fold<int>(0, (s, d) => s + d.value);
     final avgMin = (weekMin / 7).round();
-    final total = state.tasks.length;
-    final done = state.tasks.where((t) => t.completed).length;
+    final total = state.scopedTasks.length;
+    final done = state.scopedTasks.where((t) => t.completed).length;
     final pct = total == 0 ? 0 : (done / total * 100).round();
-    final overdueCount = state.tasks.where((t) => t.isOverdue).length;
-    final reviewCount = state.tasks.where((t) => t.isReview).length;
+    final overdueCount = state.scopedTasks.where((t) => t.isOverdue).length;
+    final reviewCount = state.scopedTasks.where((t) => t.isReview).length;
+    final scopeName = state.projectById(state.activeProjectId)?.name ?? state.activeGroupTag;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 110),
       children: [
         Text('学習統計', style: AppTheme.display(21)),
-        if (_view == _StatsView.summary) Text('学習時間のまとめ', style: AppTheme.body(12, color: AppColors.inkSoft)),
+        if (scopeName != null)
+          Text('「$scopeName」の統計を表示中', style: AppTheme.body(12, weight: FontWeight.w700, color: AppColors.indigo))
+        else if (_view == _StatsView.summary)
+          Text('学習時間のまとめ', style: AppTheme.body(12, color: AppColors.inkSoft)),
         const SizedBox(height: 14),
         if (_view == _StatsView.summary) ...[
           if (state.settings.weeklyGoalMinutes > 0) ...[
@@ -174,9 +137,6 @@ class _StatsScreenState extends State<StatsScreen> {
               final label = switch (v) {
                 _StatsView.summary => 'まとめ',
                 _StatsView.day => '日別',
-                _StatsView.week => '週別',
-                _StatsView.project => '教科別',
-                _StatsView.group => 'プロジェクト別',
               };
               return Expanded(
                 child: GestureDetector(
@@ -292,7 +252,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
     int totalFor(DateTime start, DateTime end) {
       var total = 0;
-      for (final t in state.tasks) {
+      for (final t in state.scopedTasks) {
         for (final s in t.sessions) {
           if (!s.date.isBefore(start) && s.date.isBefore(end)) total += s.durationSeconds;
         }
@@ -305,7 +265,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final diffMin = ((lastWeekSec - prevWeekSec) / 60).round();
 
     final byProjectSec = <Project?, int>{};
-    for (final t in state.tasks) {
+    for (final t in state.scopedTasks) {
       final p = state.projectById(t.projectId);
       for (final s in t.sessions) {
         if (!s.date.isBefore(lastWeekStart) && s.date.isBefore(lastWeekEnd)) {
@@ -317,7 +277,7 @@ class _StatsScreenState extends State<StatsScreen> {
         ? null
         : (byProjectSec.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first;
 
-    final completedInWeek = state.tasks.where((t) {
+    final completedInWeek = state.scopedTasks.where((t) {
       final at = t.completedAt;
       return at != null && !at.isBefore(lastWeekStart) && at.isBefore(lastWeekEnd);
     }).length;
@@ -325,7 +285,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final dayTotals = List.generate(7, (i) {
       final day = lastWeekStart.add(Duration(days: i));
       var total = 0;
-      for (final t in state.tasks) {
+      for (final t in state.scopedTasks) {
         for (final s in t.sessions) {
           if (sameDay(s.date, day)) total += s.durationSeconds;
         }
@@ -386,12 +346,6 @@ class _StatsScreenState extends State<StatsScreen> {
         return BarChartWidget(data: _daily(state, 7));
       case _StatsView.day:
         return _dayTimelineView(state);
-      case _StatsView.week:
-        return BarChartWidget(data: _weekly(state, 6));
-      case _StatsView.project:
-        return HorizontalBarList(items: _byProject(state));
-      case _StatsView.group:
-        return HorizontalBarList(items: _byGroup(state));
     }
   }
 

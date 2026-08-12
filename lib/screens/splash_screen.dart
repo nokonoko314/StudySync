@@ -73,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 8),
                 Opacity(
-                  opacity: iconT,
+                  opacity: iconT.clamp(0.0, 1.0),
                   child: Transform.scale(
                     scale: 0.7 + 0.3 * iconT,
                     child: Container(
@@ -90,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 16),
                 Opacity(
-                  opacity: textT,
+                  opacity: textT.clamp(0.0, 1.0),
                   child: Transform.translate(
                     offset: Offset(0, 8 * (1 - textT)),
                     child: Text('StudySync', style: AppTheme.display(22, color: Colors.white)),

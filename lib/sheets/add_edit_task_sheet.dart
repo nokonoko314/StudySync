@@ -69,6 +69,53 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
     super.dispose();
   }
 
+  Future<void> _pickProject(AppState state) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('教科を選ぶ', style: AppTheme.display(16)),
+            const SizedBox(height: 10),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.55),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: state.projects.map((p) {
+                    final active = p.id == _projectId;
+                    return Pressable(
+                      onTap: () => Navigator.pop(ctx, p.id),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                        decoration: BoxDecoration(
+                          color: active ? AppColors.indigoSoft : AppColors.surface2,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: active ? AppColors.indigo : Colors.transparent, width: 1.5),
+                        ),
+                        child: Row(children: [
+                          Container(width: 14, height: 14, decoration: BoxDecoration(color: p.color, shape: BoxShape.circle)),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(p.name, style: AppTheme.body(14.5, weight: FontWeight.w700))),
+                          if (active) Icon(Icons.check_circle, size: 20, color: AppColors.indigo),
+                        ]),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (picked != null) setState(() => _projectId = picked);
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -174,18 +221,28 @@ class _AddEditTaskBodyState extends State<_AddEditTaskBody> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _label('教科'),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: _boxDecoration(),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _projectId,
-                      isExpanded: true,
-                      items: state.projects
-                          .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: AppTheme.body(14))))
-                          .toList(),
-                      onChanged: (v) => setState(() => _projectId = v),
-                    ),
+                Pressable(
+                  onTap: () => _pickProject(state),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    decoration: _boxDecoration(),
+                    child: Row(children: [
+                      if (_projectId != null) ...[
+                        Container(
+                          width: 11,
+                          height: 11,
+                          decoration: BoxDecoration(color: state.projectById(_projectId)?.color ?? AppColors.inkFaint, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 9),
+                      ],
+                      Expanded(
+                        child: Text(
+                          state.projectById(_projectId)?.name ?? '選択してください',
+                          style: AppTheme.body(14, weight: FontWeight.w700),
+                        ),
+                      ),
+                      Icon(Icons.unfold_more_rounded, size: 17, color: AppColors.inkFaint),
+                    ]),
                   ),
                 ),
               ]),

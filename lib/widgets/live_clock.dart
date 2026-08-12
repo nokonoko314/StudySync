@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../utils/date_utils.dart';
 
-/// 「日にちと今の時間」を表示する小さなライブクロック。
-/// OSのステータスバーとは別に、ホーム画面ヘッダーに置いて使います
-/// （HTMLプロトタイプ内のブラウザ用ステータスバー再現は、実機では
-/// OSが既に表示してくれるため、Flutter版では作っていません）。
+/// ホーム画面ヘッダーに表示する、大きめのライブクロック。
+/// 「今」の時刻を、見出し書体・グラデーションで温かみを出して表示する
+/// （OSのステータスバーの時計とは別に、アプリ内の演出として置いている）。
 class LiveClock extends StatefulWidget {
   const LiveClock({super.key});
 
@@ -47,14 +46,16 @@ class _LiveClockState extends State<LiveClock> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text('${pad2(now.hour)}:${pad2(now.minute)}',
-            style: AppTheme.mono(15, weight: FontWeight.w700, color: AppColors.ink)),
-        Text('${now.month}/${now.day}(${weekdayJp(now)})',
-            style: AppTheme.body(10.5, weight: FontWeight.w600, color: AppColors.inkFaint)),
-      ],
+    return ShaderMask(
+      shaderCallback: (bounds) => LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [AppColors.ink, AppColors.indigo],
+      ).createShader(bounds),
+      child: Text(
+        '${now.hour}:${pad2(now.minute)}',
+        style: AppTheme.display(42, weight: FontWeight.w500, color: Colors.white),
+      ),
     );
   }
 }

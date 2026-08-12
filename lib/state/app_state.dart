@@ -15,7 +15,7 @@ import '../utils/date_utils.dart';
 
 enum AppScreen { home, calendar, stats, settings }
 
-enum StatusFilter { incomplete, completed, overdue, reviewOnly, all, byDeadline }
+enum StatusFilter { incomplete, completed, overdue, reviewOnly, all, byDeadline, priority }
 
 extension StatusFilterLabel on StatusFilter {
   String get label {
@@ -32,6 +32,8 @@ extension StatusFilterLabel on StatusFilter {
         return 'すべて';
       case StatusFilter.byDeadline:
         return '締切が近い順';
+      case StatusFilter.priority:
+        return '優先度順';
     }
   }
 }
@@ -275,6 +277,7 @@ class AppState extends ChangeNotifier {
       notes: notes,
       autoReview: autoReview,
       intervals: intervals ?? settings.globalIntervals.toList(),
+      sortOrder: tasks.isEmpty ? 0 : tasks.map((e) => e.sortOrder).reduce((a, b) => a > b ? a : b) + 1,
     );
     tasks.add(t);
     if (group != null) registerGroup(group);
@@ -283,6 +286,19 @@ class AppState extends ChangeNotifier {
     NotificationService.scheduleForTask(t, settings).catchError((_) {});
     notifyListeners();
     return t;
+  }
+
+  /// ホーム画面のタブでドラッグ並び替えしたあと、渡された順番どおりに
+  /// sortOrderを振り直す（先頭ほど優先度が高い＝数字が小さい）。
+  /// 並び替え対象はそのタブに表示中の一覧（フィルタ後の部分集合）のみなので、
+  /// 他のタブの並び順には影響しない。
+  void setTaskPriorityOrder(List<String> orderedTaskIds) {
+    for (var i = 0; i < orderedTaskIds.length; i++) {
+      final t = taskById(orderedTaskIds[i]);
+      if (t != null) t.sortOrder = i;
+    }
+    _persist();
+    notifyListeners();
   }
 
   void updateTask(
@@ -323,6 +339,37 @@ class AppState extends ChangeNotifier {
       NotificationService.cancelForTask(childId).catchError((_) {});
     }
     tasks.removeWhere((t) => t.id == id || t.parentId == id);
+    _persist();
+    notifyListeners();
+  }
+
+  final Set<String> _pendingDeleteIds = {};
+  final Map<String, Timer> _pendingDeleteTimers = {};
+
+  /// スワイプ削除された直後は即座には確定させず、一覧からだけ消して
+  /// 一定時間「元に戻す」を出せるようにする（データはまだ残っている）。
+  /// 時間内に undoDeleteTask されなければ、実際に deleteTask する。
+  void requestDeleteTask(String id) {
+    _pendingDeleteIds.add(id);
+    notifyListeners();
+    _pendingDeleteTimers[id]?.cancel();
+    _pendingDeleteTimers[id] = Timer(const Duration(seconds: 4), () {
+      _pendingDeleteTimers.remove(id);
+      if (_pendingDeleteIds.remove(id)) {
+        deleteTask(id);
+      }
+    });
+  }
+
+  void undoDeleteTask(String id) {
+    _pendingDeleteTimers.remove(id)?.cancel();
+    if (_pendingDeleteIds.remove(id)) notifyListeners();
+  }
+
+  /// カード左右スワイプの案内アニメーションを表示し終えたら呼ぶ（以後は出さない）。
+  void markSwipeHintSeen() {
+    if (settings.sawSwipeHint) return;
+    settings.sawSwipeHint = true;
     _persist();
     notifyListeners();
   }
@@ -555,6 +602,25 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// ホーム画面に表示するタブ（設定でカスタマイズ可能）。
+  /// 無効な保存値は無視し、1つも残らない場合は「未完了」を補う。
+  List<StatusFilter> get visibleStatusFilters {
+    final result = <StatusFilter>[];
+    for (final f in StatusFilter.values) {
+      if (settings.visibleStatusFilters.contains(f.name)) result.add(f);
+    }
+    return result.isEmpty ? [StatusFilter.incomplete] : result;
+  }
+
+  void setVisibleStatusFilters(List<StatusFilter> filters) {
+    settings.visibleStatusFilters = filters.isEmpty ? ['incomplete'] : filters.map((f) => f.name).toList();
+    if (!visibleStatusFilters.contains(statusFilter)) {
+      statusFilter = visibleStatusFilters.first;
+    }
+    _persist();
+    notifyListeners();
+  }
+
   void setActiveProject(String? id) {
     activeProjectId = id;
     if (id != null) activeGroupTag = null;
@@ -572,12 +638,61 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<Task> get filteredTasks {
-    var list = tasks.where((t) {
+  /// 指定日の合計学習時間（分）。全タスクのセッションを走査する。
+  int minutesForDay(DateTime day) {
+    var totalSeconds = 0;
+    for (final t in tasks) {
+      for (final s in t.sessions) {
+        if (sameDay(s.date, day)) totalSeconds += s.durationSeconds;
+      }
+    }
+    return totalSeconds ~/ 60;
+  }
+
+  /// 直近7日間（今日を含む）の合計学習時間（分）。ホームの週間目標表示・統計画面で使用。
+  int get weeklyStudyMinutes {
+    var total = 0;
+    final now = DateTime.now();
+    for (var i = 0; i < 7; i++) {
+      total += minutesForDay(now.subtract(Duration(days: i)));
+    }
+    return total;
+  }
+
+  /// 今日から遡って、学習記録がある連続日数。
+  /// 今日はまだ記録がなくても（これから学習する可能性があるので）
+  /// 昨日までの連続記録があればそれをストリークとして返す。
+  int get currentStreakDays {
+    final now = DateTime.now();
+    var day = now;
+    if (minutesForDay(day) <= 0) {
+      day = day.subtract(const Duration(days: 1));
+      if (minutesForDay(day) <= 0) return 0;
+    }
+    var streak = 0;
+    for (var i = 0; i < 400; i++) {
+      if (minutesForDay(day) <= 0) break;
+      streak++;
+      day = day.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+
+  /// 現在選んでいる教科（activeProjectId）／プロジェクト（activeGroupTag）に
+  /// 絞り込んだタスク一覧。ステータス（未完了/完了など）では絞らない。
+  /// ホームの一覧だけでなく、統計画面もこれを起点にすることで、
+  /// 「このプロジェクトを見ている間は、統計もそのプロジェクトの数字になる」を実現する。
+  List<Task> get scopedTasks {
+    return tasks.where((t) {
+      if (_pendingDeleteIds.contains(t.id)) return false;
       if (activeProjectId != null && t.projectId != activeProjectId) return false;
       if (activeGroupTag != null && t.group != activeGroupTag) return false;
       return true;
     }).toList();
+  }
+
+  List<Task> get filteredTasks {
+    var list = scopedTasks;
     switch (statusFilter) {
       case StatusFilter.incomplete:
         list = list.where((t) => t.status == '未完了').toList();
@@ -594,9 +709,15 @@ class AppState extends ChangeNotifier {
       case StatusFilter.all:
         break;
       case StatusFilter.byDeadline:
+        // 「締切が近い順」は常に期限順（自動ソート）。手動並び替えの対象外。
         list = list.where((t) => !t.completed).toList();
+        return list;
+      case StatusFilter.priority:
+        list = list.where((t) => !t.completed && !t.isReview).toList();
         break;
     }
+    // 「締切が近い順」以外は、ドラッグで並び替えた順序（sortOrder）で表示する。
+    list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     return list;
   }
 

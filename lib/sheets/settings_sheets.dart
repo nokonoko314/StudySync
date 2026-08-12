@@ -1064,3 +1064,59 @@ class _TimelineIntervalBody extends StatelessWidget {
     );
   }
 }
+
+void showHomeTabsSheet(BuildContext context) {
+  showAppSheet(context, title: 'ホームのタブ', bodyBuilder: (ctx) => const _HomeTabsBody());
+}
+
+class _HomeTabsBody extends StatelessWidget {
+  const _HomeTabsBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final visible = state.visibleStatusFilters;
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ホーム画面に表示するタブを選べます。最低1つは必要です。',
+                style: AppTheme.body(12.5, color: AppColors.inkSoft)),
+            const SizedBox(height: 16),
+            for (final f in StatusFilter.values) ...[
+              _option(state, f, visible.contains(f)),
+              if (f != StatusFilter.values.last) const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _option(AppState state, StatusFilter f, bool active) {
+    return Pressable(
+      onTap: () {
+        final current = state.visibleStatusFilters;
+        final next = active ? (current.where((e) => e != f).toList()) : [...current, f];
+        state.setVisibleStatusFilters(next);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: active ? AppColors.indigoSoft : AppColors.surface2,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: active ? AppColors.indigo : AppColors.line, width: 1.5),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Text(f.label, style: AppTheme.body(13.5, weight: FontWeight.w700, color: active ? AppColors.indigo : AppColors.ink)),
+          ),
+          Icon(active ? Icons.check_circle : Icons.circle_outlined, size: 20, color: active ? AppColors.indigo : AppColors.inkFaint),
+        ]),
+      ),
+    );
+  }
+}

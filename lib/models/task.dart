@@ -38,6 +38,7 @@ class Task {
   int timeSpent; // 合計学習時間（秒）
   List<StudySession> sessions;
   bool reviewsGenerated; // 復習タスクをすでに生成したか（二重生成防止）
+  int sortOrder; // 優先度順（手動並び替え）用。小さいほど上＝優先度高め
 
   Task({
     required this.id,
@@ -55,6 +56,7 @@ class Task {
     this.timeSpent = 0,
     List<StudySession>? sessions,
     this.reviewsGenerated = false,
+    this.sortOrder = 0,
   })  : intervals = intervals ?? [1, 3, 7, 14, 30],
         sessions = sessions ?? [];
 
@@ -83,6 +85,7 @@ class Task {
         'timeSpent': timeSpent,
         'sessions': sessions.map((s) => s.toJson()).toList(),
         'reviewsGenerated': reviewsGenerated,
+        'sortOrder': sortOrder,
       };
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -109,5 +112,6 @@ class Task {
                 .toList() ??
             [],
         reviewsGenerated: json['reviewsGenerated'] as bool? ?? false,
+        sortOrder: json['sortOrder'] as int? ?? 0,
       );
 }
